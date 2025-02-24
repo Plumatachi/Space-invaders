@@ -4,7 +4,7 @@ import GameObject = Phaser.GameObjects.GameObject;
 export class MainGameScene extends Scene
 {
     private playerCenter: Phaser.GameObjects.Arc;
-    private playerMovementSpeed: number = 0.9;
+    private playerShipData: PlayerShipData;
     private playerRateOfFire: number = 0.5;
     private lastShotTime: number = 0;
     private cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -29,9 +29,17 @@ export class MainGameScene extends Scene
         this.load.image('bg', 'background/Space_BG.png');
         this.load.image('planet', 'background/planet.png');
         this.load.image('player', 'player/Player_ship.png');
+        this.load.image('player_blue', 'player/Player_ship_blue.png');
+        this.load.image('player_yellow', 'player/Player_ship_yellow.png');
+
         this.load.spritesheet('enemy', 'enemies/Alan.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('player_bullets', 'bullets/Player_charged_beam.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('enemies_bullets', 'bullets/Enemy_projectile.png', { frameWidth: 16, frameHeight: 16 });
+
+        this.load.audio('sfx_laser1', 'Sounds/sfx_laser1.ogg');
+        this.load.audio('sfx_laser2', 'Sounds/sfx_laser2.ogg');
+
+        this.load.json('playerShips', 'Data/playerShips.json');
     }
 
     create ()
@@ -42,7 +50,9 @@ export class MainGameScene extends Scene
 
         this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
         this.planet = this.add.image(0, -512, 'planet').setOrigin(0);
-        this.player = this.add.sprite(this.cameras.main.centerX, this.cameras.main.height - 128, 'player').setScale(6, 6).setOrigin(0.5);
+        const playerShipsData = this.cache.json.get('playerShips') as PlayerShipsData;
+        this.playerShipData = playerShipsData[1];
+        this.player = this.add.sprite(this.cameras.main.centerX, this.cameras.main.height - 128, this.playerShipData.texture).setScale(6, 6).setOrigin(0.5);
         this.anims.create({
             key: 'enemy_idle',
             frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 4 }),
@@ -57,21 +67,40 @@ export class MainGameScene extends Scene
             repeat: -1
         });
 
+        this.anims.create({
+            key: 'enemies_bullet_idle',
+            frames: this.anims.generateFrameNumbers('enemies_bullet', { start: 0, end: 4 }),
+            frameRate: 8,
+            repeat: -1
+        });
+
         this.score = 0;
         this.lastShotTime = 0;
 
         this.cameras.main.setBackgroundColor(0xF3E9D2);
-        // this.player = this.add.triangle(this.cameras.main.centerX, this.cameras.main.height - 128, -1, 1, 1, 1, 0, -2, 0x00f3a6).setScale(32, 32).setOrigin(0);
         this.playerCenter = this.add.circle(this.cameras.main.centerX, this.cameras.main.centerY, 8, 0x1A936F);
-
-        if (this.input.keyboard) {
-            this.cursorKeys = this.input.keyboard.createCursorKeys();
-        }
 
         this.playerBullets = this.physics.add.group();
         this.enemies = this.physics.add.group();
         this.enemiesBullets = this.physics.add.group();
         this.physics.add.existing(this.player);
+        const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+        playerBody.setOffset(-1, -2);
+
+        if(this.input.keyboard){
+            this.cursorKeys = this.input.keyboard.createCursorKeys();
+
+            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE).on('down', () => {
+                this.selectPlayerShip(1);
+            });
+            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO).on('down', () => {
+                this.selectPlayerShip(2);
+            });
+            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE).on('down', () => {
+                this.selectPlayerShip(3);
+            });
+        }
+
         this.physics.add.collider(this.playerBullets, this.enemies,
             (bullet, enemy) => {
                 bullet.destroy();
@@ -115,29 +144,33 @@ export class MainGameScene extends Scene
         this.bg.tilePositionY -= 0.1 * deltaTime;
         this.planet.y += 1;
 
-        if (this.cursorKeys.left.isDown) {
-            this.player.x -= this.playerMovementSpeed * deltaTime;
-        }
-        if (this.cursorKeys.right.isDown) {
-            this.player.x += this.playerMovementSpeed * deltaTime;
-        }
-        if (this.cursorKeys.down.isDown) {
-            this.player.y += this.playerMovementSpeed * deltaTime;
-        }
-        if (this.cursorKeys.up.isDown) {
-            this.player.y -= this.playerMovementSpeed * deltaTime;
-        }
+        if (this.player && this.playerShipData) {
+            if (this.cursorKeys.left.isDown) {
+                this.player.x -= this.playerShipData.movementSpeed * deltaTime;
+            }
+            if (this.cursorKeys.right.isDown) {
+                this.player.x += this.playerShipData.movementSpeed * deltaTime;
+            }
+            if (this.cursorKeys.down.isDown) {
+                this.player.y += this.playerShipData.movementSpeed * deltaTime;
+            }
+            if (this.cursorKeys.up.isDown) {
+                this.player.y -= this.playerShipData.movementSpeed * deltaTime;
+            }
 
-        if (this.cursorKeys.space.isDown && timeSinceLaunch - this.lastShotTime > this.playerRateOfFire * 1000) {
-            // let bullet: Phaser.GameObjects.Rectangle = this.add.rectangle(this.player.x, this.player.y - this.player.displayHeight/2, 4, 12, 0xFFCA00).setOrigin(0.5);
-            let bullet = this.physics.add.sprite(this.player.x, this.player.y, 'player_bullets').setScale(5, 5);
-            this.playerBullets.add(bullet);
-            let bulletBody: Phaser.Physics.Arcade.Body = bullet.body as Phaser.Physics.Arcade.Body;
-            bulletBody.allowGravity = false;
-            bulletBody.setFriction(0, 0);
-            bulletBody.setVelocityY(-1024);
+            if (this.cursorKeys.space.isDown && timeSinceLaunch - this.lastShotTime > this.playerRateOfFire * 1000) {
+                let bullet = this.physics.add.sprite(this.player.x, this.player.y, 'player_bullets').setScale(5, 5);
+                bullet.play("player_bullets_idle");
+                this.playerBullets.add(bullet);
+                let bulletBody: Phaser.Physics.Arcade.Body = bullet.body as Phaser.Physics.Arcade.Body;
+                bulletBody.allowGravity = false;
+                bulletBody.setFriction(0, 0);
+                bulletBody.setVelocityY(-1024);
 
-            this.lastShotTime = timeSinceLaunch;
+                this.sound.play('sfx_laser1');
+
+                this.lastShotTime = timeSinceLaunch;
+            }
         }
 
         this.player.x = Phaser.Math.Clamp(this.player.x, this.player.displayWidth/2, this.cameras.main.width - this.player.displayWidth/2);
@@ -169,10 +202,7 @@ export class MainGameScene extends Scene
         }
 
         const enemySize: number = 32;
-        // let enemy: Phaser.GameObjects.Arc = this.add.circle(Phaser.Math.Between(enemySize, this.cameras.main.width - enemySize), -enemySize/2, enemySize, 0x0ad6de).setDepth(100);
-        // let enemy = this.add.image(Phaser.Math.Between(enemySize, this.cameras.main.width - enemySize), -enemySize/2, 'enemy').setScale(6, 6);
         let enemy = this.physics.add.sprite(Phaser.Math.Between(enemySize, this.cameras.main.width - enemySize), -enemySize/2, 'enemy').setScale(4, 4).setDepth(100);
-
         enemy.play('enemy_idle');
 
         this.enemies.add(enemy);
@@ -181,24 +211,42 @@ export class MainGameScene extends Scene
         enemyBody.setFriction(0, 0);
         enemyBody.setVelocityY(256);
 
-        this.time.addEvent({
-            delay: 2000,
-            callback: () => {
-                if (enemy.active) this.enemyShoot(enemy);
-            },
-            callbackScope: this,
-            loop: true
-        });
-
+        this.time.delayedCall(Phaser.Math.Between(1000, 3000), () => {
+            this.enemyPreparesToShoot(enemy);
+        }, [], this);
     }
 
     private enemyShoot(enemy: Phaser.GameObjects.Sprite) {
-        // let bullet: Phaser.GameObjects.Rectangle = this.add.rectangle(enemy.x, enemy.y + enemy.displayHeight / 2, 4, 12, 0xFF0000).setOrigin(0.5);
-        let bullet = this.add.image(enemy.x, enemy.y + enemy.displayHeight/2, 'enemies_bullet').setScale(5, 5);
+        let bullet = this.physics.add.sprite(enemy.x, enemy.y + enemy.displayHeight/2, 'enemies_bullets').setScale(5, 5);
+        bullet.play("enemies_bullets_idle");
         this.enemiesBullets.add(bullet);
         let bulletBody: Phaser.Physics.Arcade.Body = bullet.body as Phaser.Physics.Arcade.Body;
         bulletBody.allowGravity = false;
         bulletBody.setFriction(0, 0);
         bulletBody.setVelocityY(526);
+
+        this.sound.play('sfx_laser2');
+    }
+
+    private enemyPreparesToShoot(enemy: Phaser.Physics.Arcade.Sprite) {
+        this.tweens.add({
+            targets: enemy,
+            alpha: 0.5,
+            duration: 200,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => {
+                if (enemy.active) {
+                    this.enemyShoot(enemy);
+                }
+            }
+        });
+    }
+
+    private selectPlayerShip (playerShipId: number) {
+        const playerShipsData = this.cache.json.get("playerShips") as PlayerShipsData;
+        this.playerShipData = playerShipsData[playerShipId];
+
+        this.player.setTexture(this.playerShipData.texture);
     }
 }

@@ -1,0 +1,14 @@
+{
+  "1": {
+    "movementSpeed": 0.6,
+    "texture": "player"
+  },
+  "2": {
+    "movementSpeed": 0.9,
+    "texture": "player_blue"
+  },
+  "3": {
+    "movementSpeed": 1.2,
+    "texture": "player_yellow"
+  }
+}
