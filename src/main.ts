@@ -22,6 +22,9 @@ const config: Types.Core.GameConfig = {
             debug: false,
         }
     },
+    audio: {
+        noAudio: true,
+    },
     scene: [
         MainMenuScene,
         MainGameScene,
