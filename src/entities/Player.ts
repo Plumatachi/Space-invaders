@@ -10,6 +10,8 @@ export class Player extends Entity {
     public constructor(scene: Phaser.Scene, x: number, y: number, texture: string, bullets: Phaser.Physics.Arcade.Group) {
         super(scene, x, y, texture);
 
+        this.scene = scene;
+
         this.playerRateOfFire = 0.5;
         this.lastShotTime = 0;
 
@@ -44,11 +46,11 @@ export class Player extends Entity {
         this.playerShipData = playerShipsData[playerShipId];
 
         this.setTexture(this.playerShipData.texture);
-        this.arcadeBody.setCircle(9, 0, 26);
+        this.arcadeBody.setCircle(this.playerShipData.body.radius, this.playerShipData.body.offsetX, this.playerShipData.body.offsetY);
         this.arcadeBody.updateCenter();
     }
 
-    public update(timeSinceLaunch: number, deltaTime: number) {
+    preUpdate(timeSinceLaunch: number, deltaTime: number) {
         let moveX = 0;
         let moveY = 0;
 

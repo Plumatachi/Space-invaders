@@ -1,23 +1,21 @@
 import { Scene } from 'phaser';
 import { Bullet } from '../entities/Bullet';
-import GameObject = Phaser.GameObjects.GameObject;
 import {GroupUtils} from "../utils/GroupUtils.ts";
 import {Player} from "../entities/Player.ts";
 import {Enemy} from "../entities/Enemy.ts";
-import {WeaponComponent} from "../components/WeaponComponent.ts";
+import {GameDataKeys} from "../GameDataKeys.ts";
 
 export class MainGameScene extends Scene
 {
-    private gamepad: Phaser.Input.Gamepad.Gamepad | null = null;
+    // private gamepad: Phaser.Input.Gamepad.Gamepad | null = null;
     private playerBullets: Phaser.Physics.Arcade.Group;
     private enemies: Phaser.Physics.Arcade.Group;
     private enemiesBullets: Phaser.Physics.Arcade.Group;
-    private score: number;
 
     private bg: Phaser.GameObjects.TileSprite;
     private planet: Phaser.GameObjects.Image;
     private player: Phaser.GameObjects.Sprite;
-    private scoreText: Phaser.GameObjects.BitmapText;
+    private scoreText: Phaser.GameObjects.Text;
 
     constructor ()
     {
@@ -27,8 +25,6 @@ export class MainGameScene extends Scene
     preload ()
     {
         this.load.setPath('assets');
-
-        this.load.bitmapFont('numberFont', 'Score/Number_font.png', 'Score/Number_font.xml');
 
         this.load.image('bg', 'background/Space_BG.png');
         this.load.image('planet', 'background/planet.png');
@@ -68,7 +64,37 @@ export class MainGameScene extends Scene
         });
 
         this.player = new Player(this, this.cameras.main.centerX, this.cameras.main.height - 128, 'player', this.playerBullets);
+        this.animations();
+        this.cameras.main.setBackgroundColor(0xF3E9D2);
+        this.addGroupsInPhysics();
+        this.initGroupCollision();
 
+        /*if (!this.input.gamepad) {
+            this.input.gamepad = new Phaser.Input.Gamepad.GamepadPlugin(this.input);
+        }
+
+        this.input.gamepad.on('connected', (pad: Phaser.Input.Gamepad.Gamepad) => {
+            this.gamepad = pad;
+        });*/
+
+        this.registry.set<number>(GameDataKeys.PLAYER_SCORE, 0);
+        this.registry.events.on('changedata-' + GameDataKeys.PLAYER_SCORE,
+            (_: any, value: number) => {
+                score_text.setText(`Score: ${value}`);
+            }
+        );
+
+        const score_text = this.add.text(15, 15, `Score: 0`, { fontFamily: 'Arial', fontSize: '35px' });
+
+        this.time.addEvent({
+            delay: 1500,
+            callback: this.spawnEnemy,
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    private animations() {
         this.anims.create({
             key: 'enemy_idle',
             frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 4 }),
@@ -89,11 +115,9 @@ export class MainGameScene extends Scene
             frameRate: 8,
             repeat: -1
         });
+    }
 
-        this.score = 0;
-
-        this.cameras.main.setBackgroundColor(0xF3E9D2);
-
+    private addGroupsInPhysics() {
         this.enemiesBullets = this.physics.add.group({
             classType: Bullet,
             runChildUpdate: true,
@@ -120,20 +144,14 @@ export class MainGameScene extends Scene
         this.physics.add.existing(this.player);
         const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
         playerBody.setOffset(-1, -2);
+    }
 
-        if (!this.input.gamepad) {
-            this.input.gamepad = new Phaser.Input.Gamepad.GamepadPlugin(this.input);
-        }
-
-        this.input.gamepad.on('connected', (pad: Phaser.Input.Gamepad.Gamepad) => {
-            this.gamepad = pad;
-        });
-
+    private initGroupCollision() {
         this.physics.add.collider(this.playerBullets, this.enemies,
             (bullet, enemy) => {
                 (bullet as Bullet).disable();
-                enemy.destroy();
-                this.score++;
+                (enemy as Enemy).disable();
+                this.registry.inc(GameDataKeys.PLAYER_SCORE, 1);
             }
         );
 
@@ -148,35 +166,30 @@ export class MainGameScene extends Scene
             (player, enemyBullet) => {
                 player.destroy();
                 (enemyBullet as Bullet).disable();
+                /*this.player.destroy();
+                this.enemies.clear(true, true);
+                this.playerBullets.clear(true, true);
+                this.enemiesBullets.clear(true, true);*/
                 this.scene.start('GameOverScene');
             }
         );
 
         this.physics.add.collider(this.player, this.enemies,
             (player, enemy) => {
-                enemy.destroy();
+                (enemy as Enemy).disable();
                 player.destroy();
                 this.scene.start('GameOverScene');
             }
         );
-
-        this.time.addEvent({
-            delay: 1500,
-            callback: this.spawnEnemy,
-            callbackScope: this,
-            loop: true
-        });
     }
 
     update(timeSinceLaunch: number, deltaTime: number) {
         this.bg.tilePositionY -= 0.1 * deltaTime;
         this.planet.y += 1;
 
-        this.scoreText = this.add.bitmapText(10, 10, 'numberFont', `${this.score}`, 20)
-            .setOrigin(0, 0)
-            .setScale(3);
+        // this.scoreText = this.add.text(15, 15, `Score: ${this.data.get(GameDataKeys.PLAYER_SCORE).toString()}`, { fontFamily: 'Arial', fontSize: '35px' });
 
-        (this.player as Player).update(timeSinceLaunch, deltaTime);
+        //(this.player as Player).update(timeSinceLaunch, deltaTime);
 
         this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
@@ -205,13 +218,4 @@ export class MainGameScene extends Scene
         const enemy = this.enemies.get();
         (enemy as Enemy).enable();
     }
-
-    /*private enemyShoot(enemy: Phaser.GameObjects.Sprite) {
-        let bullet = new Bullet(this, enemy.x, enemy.y + enemy.displayHeight / 2, 'enemies_bullets');
-        this.add.existing(bullet);
-        this.enemiesBullets.add(bullet);
-        bullet.init();
-        bullet.enable(enemy.x, enemy.y + enemy.displayHeight / 2, bullet.width, bullet.height, 526);
-        this.sound.play('sfx_laser2');
-    }*/
 }

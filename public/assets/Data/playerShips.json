@@ -1,14 +1,29 @@
 {
   "1": {
     "movementSpeed": 0.6,
-    "texture": "player"
+    "texture": "player",
+    "body": {
+      "radius": 9,
+      "offsetx": 0,
+      "offsety": 0
+    }
   },
   "2": {
     "movementSpeed": 0.9,
-    "texture": "player_blue"
+    "texture": "player_blue",
+    "body": {
+      "radius": 9,
+      "offsetx": 0,
+      "offsety": 0
+    }
   },
   "3": {
     "movementSpeed": 1.2,
-    "texture": "player_yellow"
+    "texture": "player_yellow",
+    "body": {
+      "radius": 9,
+      "offsetx": 0,
+      "offsety": 0
+    }
   }
 }
