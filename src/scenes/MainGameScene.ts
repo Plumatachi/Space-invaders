@@ -8,9 +8,9 @@ import {Health} from "../components/Health.ts";
 
 export class MainGameScene extends Scene
 {
-    // private gamepad: Phaser.Input.Gamepad.Gamepad | null = null;
     private playerBullets: Phaser.Physics.Arcade.Group;
     private enemies: Phaser.Physics.Arcade.Group;
+    private enemiesData: EnemiesData;
     private enemiesBullets: Phaser.Physics.Arcade.Group;
 
     private bg: Phaser.GameObjects.TileSprite;
@@ -32,7 +32,7 @@ export class MainGameScene extends Scene
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
         progressBox.fillRect(this.cameras.main.centerX, this.cameras.main.centerY, width, 40);
-        /*this.load.on('progress', function (value: number) {
+        this.load.on('progress', function (value: number) {
             progressBar.clear();
             progressBar.fillStyle(0xffffff, 1);
             progressBar.fillRect(0, y, value * width, 40);
@@ -40,11 +40,9 @@ export class MainGameScene extends Scene
         this.load.on('complete', function () {
             progressBar.destroy();
             progressBox.destroy();
-        });*/
+        });
 
         this.load.setPath('assets');
-
-        // this.load.font('font', 'font/kenvector_future.ttf');
 
         this.load.image('bg', 'background/Space_BG.png');
         this.load.image('planet', 'background/planet.png');
@@ -52,7 +50,9 @@ export class MainGameScene extends Scene
         this.load.image('player_blue', 'player/Player_ship_blue.png');
         this.load.image('player_yellow', 'player/Player_ship_yellow.png');
 
-        this.load.spritesheet('enemy', 'enemies/Alan.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('alan', 'enemies/Alan.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('bon_bon', 'enemies/Bon_Bon.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('lips', 'enemies/Lips.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('player_bullets', 'bullets/Player_charged_beam.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('enemies_bullets', 'bullets/Enemy_projectile.png', { frameWidth: 16, frameHeight: 16 });
 
@@ -60,6 +60,7 @@ export class MainGameScene extends Scene
         this.load.audio('sfx_laser2', 'Sounds/sfx_laser2.ogg');
 
         this.load.json('playerShips', 'Data/playerShips.json');
+        this.load.json('enemies', 'Data/enemies.json');
     }
 
     create ()
@@ -70,6 +71,8 @@ export class MainGameScene extends Scene
 
         this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
         this.planet = this.add.image(0, -512, 'planet').setOrigin(0);
+
+        this.enemiesData = this.cache.json.get('enemies') as EnemiesData;
 
         this.input.keyboard?.addKey('R').once('down', () => {
             this.scene.restart();
@@ -99,14 +102,6 @@ export class MainGameScene extends Scene
         this.addGroupsInPhysics();
         this.initGroupCollision();
 
-        /*if (!this.input.gamepad) {
-            this.input.gamepad = new Phaser.Input.Gamepad.GamepadPlugin(this.input);
-        }
-
-        this.input.gamepad.on('connected', (pad: Phaser.Input.Gamepad.Gamepad) => {
-            this.gamepad = pad;
-        });*/
-
         this.scoreText = this.add.text(15, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' });
 
         this.registry.set<number>(GameDataKeys.PLAYER_SCORE, 0);
@@ -125,11 +120,13 @@ export class MainGameScene extends Scene
     }
 
     private addAnimations() {
-        this.anims.create({
-            key: 'enemy_idle',
-            frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 4 }),
-            frameRate: 8,
-            repeat: -1
+        Object.keys(this.enemiesData).forEach(enemyKey => {
+            this.anims.create({
+                key: `${enemyKey}_idle`,
+                frames: this.anims.generateFrameNumbers(enemyKey, { start: 0, end: 4 }),
+                frameRate: 8,
+                repeat: -1
+            });
         });
 
         this.anims.create({
@@ -163,11 +160,8 @@ export class MainGameScene extends Scene
 
         this.enemies = this.physics.add.group({
             classType: Enemy,
-            defaultKey: 'enemy',
-            defaultFrame: 'enemies/Alan.png',
-            // runChildUpdate: true,
             createCallback: (enemy) => {
-                (enemy as Enemy).init('enemy', this.enemiesBullets);
+                (enemy as Enemy).init('alan', this.enemiesBullets, 0.2);
             }
         });
 
@@ -195,11 +189,9 @@ export class MainGameScene extends Scene
 
         this.physics.add.collider(this.player, this.enemiesBullets,
             (player, enemyBullet) => {
-                // player.destroy();
-                (this.player as Player).getComponent(Health)?.inc(-1);
-                (this.player as Player).changeVelocity(0, 0);
+                (player as Player).getComponent(Health)?.inc(-1);
+                (player as Player).changeVelocity(0, 0);
                 (enemyBullet as Bullet).disable();
-                // this.scene.start('GameOverScene');
             }
         );
 
@@ -207,10 +199,8 @@ export class MainGameScene extends Scene
             (player, enemy) => {
                 const enemyHealth = (enemy as Enemy).getComponent(Health);
                 enemyHealth?.inc(-enemyHealth?.getMaxHealth());
-                // player.destroy();
-                (this.player as Player).getComponent(Health)?.inc(-1);
-                (this.player as Player).changeVelocity(0, 0);
-                // this.scene.start('GameOverScene');
+                (player as Player).getComponent(Health)?.inc(-1);
+                (player as Player).changeVelocity(0, 0);
             }
         );
     }
@@ -218,8 +208,6 @@ export class MainGameScene extends Scene
     update(timeSinceLaunch: number, deltaTime: number) {
         this.bg.tilePositionY -= 0.1 * deltaTime;
         this.planet.y += 1;
-
-        // (this.player as Player).update(timeSinceLaunch, deltaTime);
 
         this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
@@ -245,7 +233,12 @@ export class MainGameScene extends Scene
             return;
         }
 
-        const enemy = this.enemies.get();
-        (enemy as Enemy).enable();
+        const enemyKeys = Object.keys(this.enemiesData);
+        const randomKey = Phaser.Utils.Array.GetRandom(enemyKeys);
+        const enemyData = this.enemiesData[randomKey];
+
+        const enemy = this.enemies.get() as Enemy;
+        enemy.init(enemyData.texture, this.enemiesBullets, enemyData.movementSpeed);
+        enemy.enable();
     }
 }

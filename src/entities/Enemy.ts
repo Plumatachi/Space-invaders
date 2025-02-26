@@ -4,7 +4,8 @@ import {Movement} from "../components/Movement.ts";
 import {Health} from "../components/Health.ts";
 
 export class Enemy extends Entity {
-    public init(texture: string, bullets: Phaser.Physics.Arcade.Group) {
+
+    public init(texture: string, bullets: Phaser.Physics.Arcade.Group, speed: number) {
         this.setAngle(-90);
         this.arcadeBody.allowGravity = false;
         this.arcadeBody.setFriction(0, 0);
@@ -12,7 +13,7 @@ export class Enemy extends Entity {
         this.setTexture(texture);
         this.arcadeBody.setCircle(8, 0, 0);
         this.addComponent(new WeaponComponent(bullets, this.scene.sound.add('sfx_laser2'), 4, 12, 1024));
-        this.addComponent(new Movement(0.2));
+        this.addComponent(new Movement(speed));
         this.addComponent(new Health(1));
     }
 
@@ -22,7 +23,7 @@ export class Enemy extends Entity {
         this.x = Phaser.Math.Between(32, this.scene.cameras.main.width - 32);
         this.y = -32/2;
 
-        this.play('enemy_idle');
+        this.play(`${this.texture.key}_idle`);
         this.setScale(4, 4);
         this.setDepth(100);
 
