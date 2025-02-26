@@ -5,6 +5,7 @@ import {Player} from "../entities/Player.ts";
 import {Enemy} from "../entities/Enemy.ts";
 import {GameDataKeys} from "../GameDataKeys.ts";
 import {Health} from "../components/Health.ts";
+import {LevelManager} from "../components/LevelManager.ts";
 
 export class MainGameScene extends Scene
 {
@@ -12,11 +13,13 @@ export class MainGameScene extends Scene
     private enemies: Phaser.Physics.Arcade.Group;
     private enemiesData: EnemiesData;
     private enemiesBullets: Phaser.Physics.Arcade.Group;
+    private levelManager: LevelManager;
 
     private bg: Phaser.GameObjects.TileSprite;
     private planet: Phaser.GameObjects.Image;
     private player: Phaser.GameObjects.Sprite;
     private scoreText: Phaser.GameObjects.Text;
+    private levelText: Phaser.GameObjects.Text;
 
     constructor ()
     {
@@ -73,6 +76,8 @@ export class MainGameScene extends Scene
         this.planet = this.add.image(0, -512, 'planet').setOrigin(0);
 
         this.enemiesData = this.cache.json.get('enemies') as EnemiesData;
+        this.levelManager = new LevelManager(this);
+        this.registry.set('level', this.levelManager.getLevel());
 
         this.input.keyboard?.addKey('R').once('down', () => {
             this.scene.restart();
@@ -103,6 +108,10 @@ export class MainGameScene extends Scene
         this.initGroupCollision();
 
         this.scoreText = this.add.text(15, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' });
+        this.levelText = this.add.text(15, 55, `Niveau: ${this.levelManager.getLevel()}`, {
+            fontFamily: 'font',
+            fontSize: '35px'
+        });
 
         this.registry.set<number>(GameDataKeys.PLAYER_SCORE, 0);
         this.registry.events.on('changedata-' + GameDataKeys.PLAYER_SCORE,
@@ -177,6 +186,7 @@ export class MainGameScene extends Scene
                 (enemy as Enemy).disable();
                 (enemy as Enemy).changeVelocity(0, 0);
                 this.registry.inc(GameDataKeys.PLAYER_SCORE, 1);
+                this.levelManager.registerKill();
             }
         );
 
@@ -201,6 +211,7 @@ export class MainGameScene extends Scene
                 enemyHealth?.inc(-enemyHealth?.getMaxHealth());
                 (player as Player).getComponent(Health)?.inc(-1);
                 (player as Player).changeVelocity(0, 0);
+                this.levelManager.registerKill();
             }
         );
     }
@@ -208,6 +219,8 @@ export class MainGameScene extends Scene
     update(timeSinceLaunch: number, deltaTime: number) {
         this.bg.tilePositionY -= 0.1 * deltaTime;
         this.planet.y += 1;
+
+        this.levelText.setText(`Niveau: ${this.registry.get('level')}`);
 
         this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
@@ -229,7 +242,7 @@ export class MainGameScene extends Scene
     }
 
     private spawnEnemy() {
-        if (this.enemies.countActive(true) >= 15) {
+        if (this.enemies.countActive(true) >= this.levelManager.getMaxEnemiesPerWave()) {
             return;
         }
 
@@ -238,7 +251,7 @@ export class MainGameScene extends Scene
         const enemyData = this.enemiesData[randomKey];
 
         const enemy = this.enemies.get() as Enemy;
-        enemy.init(enemyData.texture, this.enemiesBullets, enemyData.movementSpeed);
+        enemy.init(enemyData.texture, this.enemiesBullets, enemyData.movementSpeed + (this.levelManager.getLevel() * 0.1));
         enemy.enable();
     }
 }
