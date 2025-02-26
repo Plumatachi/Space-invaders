@@ -33,4 +33,8 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
     public removeComponents<T extends IComponent>(type: new (...args: any[]) => T) {
         this.components = this.components.filter((component) => !(component instanceof type));
     }
+
+    public changeVelocity(x: number, y: number) {
+        this.arcadeBody.setVelocity(x, y);
+    }
 }

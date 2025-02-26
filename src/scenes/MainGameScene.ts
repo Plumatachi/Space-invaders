@@ -4,6 +4,7 @@ import {GroupUtils} from "../utils/GroupUtils.ts";
 import {Player} from "../entities/Player.ts";
 import {Enemy} from "../entities/Enemy.ts";
 import {GameDataKeys} from "../GameDataKeys.ts";
+import {Health} from "../components/Health.ts";
 
 export class MainGameScene extends Scene
 {
@@ -31,7 +32,7 @@ export class MainGameScene extends Scene
         const progressBox = this.add.graphics();
         progressBox.fillStyle(0x222222, 0.8);
         progressBox.fillRect(this.cameras.main.centerX, this.cameras.main.centerY, width, 40);
-        this.load.on('progress', function (value: number) {
+        /*this.load.on('progress', function (value: number) {
             progressBar.clear();
             progressBar.fillStyle(0xffffff, 1);
             progressBar.fillRect(0, y, value * width, 40);
@@ -39,9 +40,11 @@ export class MainGameScene extends Scene
         this.load.on('complete', function () {
             progressBar.destroy();
             progressBox.destroy();
-        });
+        });*/
 
         this.load.setPath('assets');
+
+        // this.load.font('font', 'font/kenvector_future.ttf');
 
         this.load.image('bg', 'background/Space_BG.png');
         this.load.image('planet', 'background/planet.png');
@@ -68,6 +71,10 @@ export class MainGameScene extends Scene
         this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
         this.planet = this.add.image(0, -512, 'planet').setOrigin(0);
 
+        this.input.keyboard?.addKey('R').once('down', () => {
+            this.scene.restart();
+        });
+
         this.playerBullets = this.physics.add.group({
             classType: Bullet,
             runChildUpdate: true,
@@ -80,8 +87,14 @@ export class MainGameScene extends Scene
             maxSize: 256
         });
 
-        this.player = new Player(this, this.cameras.main.centerX, this.cameras.main.height - 128, 'player', this.playerBullets);
-        this.animations();
+        const selectedShip = this.registry.get('selectedShip') || 'player';
+        this.player = new Player(this, this.cameras.main.centerX, this.cameras.main.height - 128, selectedShip, this.playerBullets);
+        (this.player as Player).getComponent(Health)?.once('death', () => {
+            (this.player as Player).disableBody(true, true);
+            this.scene.start('GameOverScene');
+        });
+
+        this.addAnimations();
         this.cameras.main.setBackgroundColor(0xF3E9D2);
         this.addGroupsInPhysics();
         this.initGroupCollision();
@@ -97,11 +110,11 @@ export class MainGameScene extends Scene
         this.registry.set<number>(GameDataKeys.PLAYER_SCORE, 0);
         this.registry.events.on('changedata-' + GameDataKeys.PLAYER_SCORE,
             (_: any, value: number) => {
-                score_text.setText(`Score: ${value}`);
+                this.scoreText.setText(`Score: ${value}`);
             }
         );
 
-        const score_text = this.add.text(15, 15, `Score: 0`, { fontFamily: 'Arial', fontSize: '35px' });
+        this.scoreText = this.add.text(15, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' });
 
         this.time.addEvent({
             delay: 1500,
@@ -111,7 +124,7 @@ export class MainGameScene extends Scene
         });
     }
 
-    private animations() {
+    private addAnimations() {
         this.anims.create({
             key: 'enemy_idle',
             frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 4 }),
@@ -152,7 +165,7 @@ export class MainGameScene extends Scene
             classType: Enemy,
             defaultKey: 'enemy',
             defaultFrame: 'enemies/Alan.png',
-            runChildUpdate: true,
+            // runChildUpdate: true,
             createCallback: (enemy) => {
                 (enemy as Enemy).init('enemy', this.enemiesBullets);
             }
@@ -168,6 +181,7 @@ export class MainGameScene extends Scene
             (bullet, enemy) => {
                 (bullet as Bullet).disable();
                 (enemy as Enemy).disable();
+                (enemy as Enemy).changeVelocity(0, 0);
                 this.registry.inc(GameDataKeys.PLAYER_SCORE, 1);
             }
         );
@@ -181,21 +195,22 @@ export class MainGameScene extends Scene
 
         this.physics.add.collider(this.player, this.enemiesBullets,
             (player, enemyBullet) => {
-                player.destroy();
+                // player.destroy();
+                (this.player as Player).getComponent(Health)?.inc(-1);
+                (this.player as Player).changeVelocity(0, 0);
                 (enemyBullet as Bullet).disable();
-                /*this.player.destroy();
-                this.enemies.clear(true, true);
-                this.playerBullets.clear(true, true);
-                this.enemiesBullets.clear(true, true);*/
-                this.scene.start('GameOverScene');
+                // this.scene.start('GameOverScene');
             }
         );
 
         this.physics.add.collider(this.player, this.enemies,
             (player, enemy) => {
-                (enemy as Enemy).disable();
-                player.destroy();
-                this.scene.start('GameOverScene');
+                const enemyHealth = (enemy as Enemy).getComponent(Health);
+                enemyHealth?.inc(-enemyHealth?.getMaxHealth());
+                // player.destroy();
+                (this.player as Player).getComponent(Health)?.inc(-1);
+                (this.player as Player).changeVelocity(0, 0);
+                // this.scene.start('GameOverScene');
             }
         );
     }
@@ -204,9 +219,7 @@ export class MainGameScene extends Scene
         this.bg.tilePositionY -= 0.1 * deltaTime;
         this.planet.y += 1;
 
-        // this.scoreText = this.add.text(15, 15, `Score: ${this.data.get(GameDataKeys.PLAYER_SCORE).toString()}`, { fontFamily: 'Arial', fontSize: '35px' });
-
-        //(this.player as Player).update(timeSinceLaunch, deltaTime);
+        // (this.player as Player).update(timeSinceLaunch, deltaTime);
 
         this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
@@ -216,7 +229,7 @@ export class MainGameScene extends Scene
 
         this.enemies.getChildren().forEach(enemy => {
             if ((enemy as Phaser.GameObjects.Arc).y >= this.cameras.main.height + (enemy as Phaser.GameObjects.Arc).displayHeight) {
-                enemy.destroy();
+                (enemy as Enemy).disable();
             }
         });
 
@@ -228,7 +241,7 @@ export class MainGameScene extends Scene
     }
 
     private spawnEnemy() {
-        if (this.enemies.getLength() >= 5) {
+        if (this.enemies.countActive(true) >= 15) {
             return;
         }
 

@@ -1,5 +1,7 @@
 import {Entity} from "./Entity.ts";
 import {WeaponComponent} from "../components/WeaponComponent.ts";
+import {Movement} from "../components/Movement.ts";
+import {Health} from "../components/Health.ts";
 
 export class Player extends Entity {
     private playerShipData: PlayerShipData;
@@ -20,16 +22,14 @@ export class Player extends Entity {
         this.setAngle(-90);
 
         this.addComponent(new WeaponComponent(bullets, scene.sound.add('sfx_laser1'), 4, 12, 1024));
-        this.selectPlayerShip(1);
-
-        if (this.scene.input.keyboard) {
-            this.cursorKeys = this.scene.input.keyboard.createCursorKeys();
-        }
+        this.addComponent(new Movement());
+        this.addComponent(new Health(3));
+        this.selectPlayerShip(texture);
 
         if(this.scene.input.keyboard) {
             this.cursorKeys = this.scene.input.keyboard.createCursorKeys();
 
-            this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE).on('down', () => {
+            /*this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE).on('down', () => {
                 this.selectPlayerShip(1);
             });
             this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO).on('down', () => {
@@ -37,17 +37,19 @@ export class Player extends Entity {
             });
             this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE).on('down', () => {
                 this.selectPlayerShip(3);
-            });
+            });*/
         }
     }
 
-    private selectPlayerShip (playerShipId: number) {
+    private selectPlayerShip (textureKey: string) {
         const playerShipsData = this.scene.cache.json.get("playerShips") as PlayerShipsData;
-        this.playerShipData = playerShipsData[playerShipId];
+        this.playerShipData = playerShipsData[textureKey];
 
         this.setTexture(this.playerShipData.texture);
         this.arcadeBody.setCircle(this.playerShipData.body.radius, this.playerShipData.body.offsetX, this.playerShipData.body.offsetY);
         this.arcadeBody.updateCenter();
+
+        this.getComponent(Movement)?.setSpeed(this.playerShipData.movementSpeed);
     }
 
     preUpdate(timeSinceLaunch: number, deltaTime: number) {
@@ -55,34 +57,23 @@ export class Player extends Entity {
         let moveY = 0;
 
         if (this.playerShipData) {
-            /*if (this.gamepad) {
-                moveX = this.gamepad.axes[0].getValue();
-                moveY = this.gamepad.axes[1].getValue();
-            }*/
-
             if (this.cursorKeys.left.isDown) {
-                this.x -= this.playerShipData.movementSpeed * deltaTime;
+                this.getComponent(Movement)?.moveHorizontally(this, -deltaTime);
             }
             if (this.cursorKeys.right.isDown) {
-                this.x += this.playerShipData.movementSpeed * deltaTime;
+                this.getComponent(Movement)?.moveHorizontally(this, deltaTime);
             }
             if (this.cursorKeys.down.isDown) {
-                this.y += this.playerShipData.movementSpeed * deltaTime;
+                this.getComponent(Movement)?.moveVertically(this, deltaTime);
             }
             if (this.cursorKeys.up.isDown) {
-                this.y -= this.playerShipData.movementSpeed * deltaTime;
+                this.getComponent(Movement)?.moveVertically(this, -deltaTime);
             }
 
             if (this.cursorKeys.space.isDown && timeSinceLaunch - this.lastShotTime > this.playerRateOfFire * 1000) {
                 this.getComponent(WeaponComponent)?.shoot(this, this.rotation);
                 this.lastShotTime = timeSinceLaunch;
             }
-
-            /*if ((this.cursorKeys.space.isDown || (this.gamepad && this.gamepad.buttons[0].pressed)) &&
-                timeSinceLaunch - this.lastShotTime > this.playerRateOfFire * 1000) {
-                this.shootBullet();
-                this.lastShotTime = timeSinceLaunch;
-            }*/
         }
 
         this.x = Phaser.Math.Clamp(this.x, this.displayWidth/2, this.scene.cameras.main.width - this.displayWidth/2);

@@ -1,11 +1,9 @@
 import {Entity} from "./Entity.ts";
 import {WeaponComponent} from "../components/WeaponComponent.ts";
+import {Movement} from "../components/Movement.ts";
+import {Health} from "../components/Health.ts";
 
 export class Enemy extends Entity {
-    /*public constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
-        super(scene, x, y, texture);
-    }*/
-
     public init(texture: string, bullets: Phaser.Physics.Arcade.Group) {
         this.setAngle(-90);
         this.arcadeBody.allowGravity = false;
@@ -14,16 +12,23 @@ export class Enemy extends Entity {
         this.setTexture(texture);
         this.arcadeBody.setCircle(8, 0, 0);
         this.addComponent(new WeaponComponent(bullets, this.scene.sound.add('sfx_laser2'), 4, 12, 1024));
+        this.addComponent(new Movement(0.2));
+        this.addComponent(new Health(1));
     }
 
     public enable() {
+        this.enableBody(true, this.x, this.y, true, true);
+
         this.x = Phaser.Math.Between(32, this.scene.cameras.main.width - 32);
         this.y = -32/2;
 
         this.play('enemy_idle');
-        this.arcadeBody.setVelocityY(256);
         this.setScale(4, 4);
         this.setDepth(100);
+
+        this.getComponent(Health)?.once('death', () => {
+            this.disable();
+        });
 
         this.scene.time.delayedCall(Phaser.Math.Between(1000, 3000), () => {
             this.enemyPreparesToShoot();
@@ -31,9 +36,7 @@ export class Enemy extends Entity {
     }
 
     public disable() {
-        this.setActive(false);
-        this.setVisible(false);
-        this.arcadeBody.setEnable(false);
+        this.disableBody(true, true);
     }
 
     public enemyPreparesToShoot() {
@@ -49,5 +52,11 @@ export class Enemy extends Entity {
                 }
             }
         });
+    }
+
+    preUpdate(timeSinceLaunch: number, deltaTime: number) {
+        super.preUpdate(timeSinceLaunch, deltaTime);
+
+        this.getComponent(Movement)?.moveVertically(this, deltaTime);
     }
 }
