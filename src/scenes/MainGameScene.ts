@@ -102,14 +102,14 @@ export class MainGameScene extends Scene
         this.addGroupsInPhysics();
         this.initGroupCollision();
 
+        this.scoreText = this.add.text(15, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' });
+
         this.registry.set<number>(GameDataKeys.PLAYER_SCORE, 0);
         this.registry.events.on('changedata-' + GameDataKeys.PLAYER_SCORE,
             (_: any, value: number) => {
                 this.scoreText.setText(`Score: ${value}`);
             }
         );
-
-        this.scoreText = this.add.text(15, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' });
 
         this.time.addEvent({
             delay: 1500,
