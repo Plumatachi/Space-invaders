@@ -24,6 +24,23 @@ export class MainGameScene extends Scene
 
     preload ()
     {
+        const width: number = this.cameras.main.width;
+        const y: number = this.cameras.main.centerY;
+
+        const progressBar = this.add.graphics();
+        const progressBox = this.add.graphics();
+        progressBox.fillStyle(0x222222, 0.8);
+        progressBox.fillRect(this.cameras.main.centerX, this.cameras.main.centerY, width, 40);
+        this.load.on('progress', function (value: number) {
+            progressBar.clear();
+            progressBar.fillStyle(0xffffff, 1);
+            progressBar.fillRect(0, y, value * width, 40);
+        });
+        this.load.on('complete', function () {
+            progressBar.destroy();
+            progressBox.destroy();
+        });
+
         this.load.setPath('assets');
 
         this.load.image('bg', 'background/Space_BG.png');
