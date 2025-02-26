@@ -1,0 +1,14 @@
+{
+  "alan": {
+    "movementSpeed": 0.2,
+    "texture": "alan"
+  },
+  "bon_bon": {
+    "movementSpeed": 0.5,
+    "texture": "bon_bon"
+  },
+  "lips": {
+    "movementSpeed": 0.8,
+    "texture": "lips"
+  }
+}
