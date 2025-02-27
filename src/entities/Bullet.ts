@@ -14,6 +14,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
         this.setScale(5, 5);
 
         this.arcadeBody.setVelocity(velocityX, velocityY);
+        this.arcadeBody.setCircle(8, 0, 0);
 
         this.scene.physics.world.add(this.arcadeBody);
         this.setActive(true);

@@ -5,6 +5,8 @@ import {Player} from "../entities/Player.ts";
 import {Enemy} from "../entities/Enemy.ts";
 import {GameDataKeys} from "../GameDataKeys.ts";
 import {Health} from "../components/Health.ts";
+import {LevelManager} from "../components/LevelManager.ts";
+import {Boss} from "../entities/Boss.ts";
 
 export class MainGameScene extends Scene
 {
@@ -12,11 +14,16 @@ export class MainGameScene extends Scene
     private enemies: Phaser.Physics.Arcade.Group;
     private enemiesData: EnemiesData;
     private enemiesBullets: Phaser.Physics.Arcade.Group;
+    private levelManager: LevelManager;
+    private bossBullets: Phaser.Physics.Arcade.Group;
+    private boss: Boss;
+    private bossIsActive: boolean = false;
 
     private bg: Phaser.GameObjects.TileSprite;
     private planet: Phaser.GameObjects.Image;
     private player: Phaser.GameObjects.Sprite;
     private scoreText: Phaser.GameObjects.Text;
+    private levelText: Phaser.GameObjects.Text;
 
     constructor ()
     {
@@ -49,12 +56,14 @@ export class MainGameScene extends Scene
         this.load.image('player', 'player/Player_ship.png');
         this.load.image('player_blue', 'player/Player_ship_blue.png');
         this.load.image('player_yellow', 'player/Player_ship_yellow.png');
+        this.load.image('boss', 'enemies/Boss.png');
 
         this.load.spritesheet('alan', 'enemies/Alan.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('bon_bon', 'enemies/Bon_Bon.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('lips', 'enemies/Lips.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('player_bullets', 'bullets/Player_charged_beam.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('enemies_bullets', 'bullets/Enemy_projectile.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('boss_bullets', 'bullets/Boss_bullets.png', { frameWidth: 16, frameHeight: 16 });
 
         this.load.audio('sfx_laser1', 'Sounds/sfx_laser1.ogg');
         this.load.audio('sfx_laser2', 'Sounds/sfx_laser2.ogg');
@@ -72,19 +81,43 @@ export class MainGameScene extends Scene
         this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
         this.planet = this.add.image(0, -512, 'planet').setOrigin(0);
 
+        this.bossIsActive = false;
+
         this.enemiesData = this.cache.json.get('enemies') as EnemiesData;
+        this.levelManager = new LevelManager(this);
+        this.registry.set('level', this.levelManager.getLevel());
+
+        if (this.levelManager.getLevel() % 10 === 0) {
+            this.spawnBoss();
+        } else {
+            this.time.addEvent({
+                delay: 1500,
+                callback: this.spawnEnemy,
+                callbackScope: this,
+                loop: true
+            });
+        }
 
         this.input.keyboard?.addKey('R').once('down', () => {
             this.scene.restart();
         });
 
+        this.bossBullets = this.physics.add.group({
+            classType: Bullet,
+            runChildUpdate: true,
+            maxSize: 20,
+            createCallback: (bullet) => {
+                (bullet as Bullet).init();
+                (bullet as Bullet).play('boss_bullets_idle');
+            }
+        });
+
         this.playerBullets = this.physics.add.group({
             classType: Bullet,
             runChildUpdate: true,
-            defaultKey: 'player_bullets',
-            defaultFrame: 'bullets/Player_charged_beam.png',
             createCallback: (bullet) => {
                 (bullet as Bullet).init();
+                (bullet as Bullet).play('player_bullets_idle');
             },
             quantity: 8,
             maxSize: 256
@@ -103,6 +136,10 @@ export class MainGameScene extends Scene
         this.initGroupCollision();
 
         this.scoreText = this.add.text(15, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' });
+        this.levelText = this.add.text(15, 55, `Niveau: ${this.levelManager.getLevel()}`, {
+            fontFamily: 'font',
+            fontSize: '35px'
+        });
 
         this.registry.set<number>(GameDataKeys.PLAYER_SCORE, 0);
         this.registry.events.on('changedata-' + GameDataKeys.PLAYER_SCORE,
@@ -110,13 +147,6 @@ export class MainGameScene extends Scene
                 this.scoreText.setText(`Score: ${value}`);
             }
         );
-
-        this.time.addEvent({
-            delay: 1500,
-            callback: this.spawnEnemy,
-            callbackScope: this,
-            loop: true
-        });
     }
 
     private addAnimations() {
@@ -141,6 +171,13 @@ export class MainGameScene extends Scene
             frames: this.anims.generateFrameNumbers('enemies_bullet', { start: 0, end: 4 }),
             frameRate: 8,
             repeat: -1
+        });
+
+        this.anims.create({
+          key: 'boss_bullets_idle',
+          frames: this.anims.generateFrameNumbers('boss_bullets', { start: 0, end: 4 }),
+          frameRate: 8,
+          repeat: -1
         });
     }
 
@@ -177,6 +214,7 @@ export class MainGameScene extends Scene
                 (enemy as Enemy).disable();
                 (enemy as Enemy).changeVelocity(0, 0);
                 this.registry.inc(GameDataKeys.PLAYER_SCORE, 1);
+                this.levelManager.registerKill();
             }
         );
 
@@ -201,6 +239,7 @@ export class MainGameScene extends Scene
                 enemyHealth?.inc(-enemyHealth?.getMaxHealth());
                 (player as Player).getComponent(Health)?.inc(-1);
                 (player as Player).changeVelocity(0, 0);
+                this.levelManager.registerKill();
             }
         );
     }
@@ -208,6 +247,8 @@ export class MainGameScene extends Scene
     update(timeSinceLaunch: number, deltaTime: number) {
         this.bg.tilePositionY -= 0.1 * deltaTime;
         this.planet.y += 1;
+
+        this.levelText.setText(`Niveau: ${this.registry.get('level')}`);
 
         this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
@@ -229,7 +270,7 @@ export class MainGameScene extends Scene
     }
 
     private spawnEnemy() {
-        if (this.enemies.countActive(true) >= 15) {
+        if (this.bossIsActive || this.enemies.countActive(true) >= this.levelManager.getMaxEnemiesPerWave()) {
             return;
         }
 
@@ -238,7 +279,91 @@ export class MainGameScene extends Scene
         const enemyData = this.enemiesData[randomKey];
 
         const enemy = this.enemies.get() as Enemy;
-        enemy.init(enemyData.texture, this.enemiesBullets, enemyData.movementSpeed);
+        enemy.init(enemyData.texture, this.enemiesBullets, enemyData.movementSpeed + (this.levelManager.getLevel() * 0.1));
         enemy.enable();
+    }
+
+    public spawnWave(): void {
+        const numEnemies = 10 + (this.levelManager.getLevel() * 2);
+
+        for (let i = 0; i < numEnemies; i++) {
+            this.showWarning("⚠️ Alien horde incoming !! ⚠️");
+            this.time.delayedCall(i * 300, () => {
+                this.spawnEnemy();
+            });
+        }
+    }
+
+    private spawnBoss() {
+        this.bossIsActive = true;
+
+        this.enemies.getChildren().forEach((enemy) => {
+            (enemy as Enemy).disable();
+        });
+
+        this.cameras.main.shake(300, 0.01);
+        this.showWarning("⚠️ Boss Incoming !! ⚠️");
+
+        this.time.delayedCall(2000, () => {
+            this.boss = new Boss(this, this.cameras.main.centerX, -300, 'boss', this.bossBullets, this.player);
+            this.boss.setScale(8);
+
+            this.tweens.add({
+                targets: this.boss,
+                y: this.cameras.main.centerY - 400,
+                duration: 2000,
+                ease: 'power2',
+                onComplete: () => {
+                    this.boss.startMoving();
+                },
+            });
+
+            (this.boss as Boss).getComponent(Health)?.once('death', () => {
+                this.bossIsActive = false;
+            });
+
+            this.physics.add.overlap(this.player, this.boss,
+                (player, boss) => {
+                    (player as Player).getComponent(Health)?.inc(-2);
+                    (boss as Boss).takeDamage(-1);
+                }
+            );
+
+            this.physics.add.overlap(this.boss, this.playerBullets,
+                (boss, bullet) => {
+                    (boss as Boss).takeDamage(-1);
+                    (bullet as Bullet).disable();
+
+                }
+            );
+
+            this.physics.add.overlap(this.player, this.bossBullets,
+                (player, bossBullet) => {
+                    (player as Player).getComponent(Health)?.inc(-3);
+                    (bossBullet as Bullet).disable();
+                }
+            );
+
+            this.physics.add.collider(this.playerBullets, this.bossBullets,
+                (bullet, bossBullet) => {
+                    (bullet as Bullet).disable();
+                    (bossBullet as Bullet).disable();
+                }
+            );
+        });
+    }
+
+    private showWarning(message: string): void {
+        const warningText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, message, {
+            fontFamily: 'font',
+            fontSize: "48px",
+            color: "#ff0000",
+            fontStyle: "bold",
+            align: "center"
+        }).setOrigin(0.5);
+
+        this.time.delayedCall(2000, () => {
+            warningText.destroy();
+        });
     }
 }
