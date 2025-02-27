@@ -23,7 +23,7 @@ export class Player extends Entity {
 
         this.addComponent(new WeaponComponent(bullets, scene.sound.add('sfx_laser1'), 4, 12, 1024));
         this.addComponent(new Movement());
-        this.addComponent(new Health(9999));
+        this.addComponent(new Health(10));
         this.selectPlayerShip(texture);
 
         if(this.scene.input.keyboard) {
