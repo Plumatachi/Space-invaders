@@ -14,7 +14,7 @@ export class Player extends Entity {
 
         this.scene = scene;
 
-        this.playerRateOfFire = 0.1;
+        this.playerRateOfFire = 0.5;
         this.lastShotTime = 0;
 
         this.setScale(6, 6);
@@ -23,7 +23,7 @@ export class Player extends Entity {
 
         this.addComponent(new WeaponComponent(bullets, scene.sound.add('sfx_laser1'), 4, 12, 1024));
         this.addComponent(new Movement());
-        this.addComponent(new Health(9999));
+        this.addComponent(new Health(3));
         this.selectPlayerShip(texture);
 
         if(this.scene.input.keyboard) {
@@ -43,9 +43,6 @@ export class Player extends Entity {
     }
 
     preUpdate(timeSinceLaunch: number, deltaTime: number) {
-        let moveX = 0;
-        let moveY = 0;
-
         if (this.playerShipData) {
             if (this.cursorKeys.left.isDown) {
                 this.getComponent(Movement)?.moveHorizontally(this, -deltaTime);
@@ -64,6 +61,8 @@ export class Player extends Entity {
                 this.getComponent(WeaponComponent)?.shoot(this, this.rotation);
                 this.lastShotTime = timeSinceLaunch;
             }
+
+            this.scene.registry.set('player', this);
         }
 
         this.x = Phaser.Math.Clamp(this.x, this.displayWidth/2, this.scene.cameras.main.width - this.displayWidth/2);
