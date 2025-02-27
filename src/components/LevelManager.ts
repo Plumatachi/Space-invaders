@@ -10,7 +10,7 @@ export class LevelManager implements IComponent {
         this.level = 1;
         this.enemiesKilled = 0;
         this.enemiesToKill = 10;
-        this.maxEnemiesPerWave = 5;
+        this.maxEnemiesPerWave = 30;
     }
 
     public getLevel(): number {
@@ -32,12 +32,27 @@ export class LevelManager implements IComponent {
         }
     }
 
-    private nextLevel(): void {
+    public nextLevel(): void {
         this.level++;
         this.enemiesKilled = 0;
         this.enemiesToKill += 5;
         this.maxEnemiesPerWave += 2;
 
         this.scene.registry.set('level', this.level);
+        console.log(`🌟 Nouveau niveau atteint : ${this.level}`);
+
+        // Si le niveau est un multiple de 5 (hors multiples de 10), c'est une vague spéciale
+        if (this.level % 10 !== 0 && this.level % 5 === 0) {
+            console.log("🔥 VAGUE SPÉCIALE !");
+            this.scene.spawnWave();
+        }
+
+        // Si le niveau est un multiple de 10, un boss apparaît
+        if (this.level % 10 === 0) {
+            console.log("💀 BOSS INCOMING !");
+            this.scene.spawnBoss();
+        }
     }
+
+
 }

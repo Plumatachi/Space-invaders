@@ -4,7 +4,6 @@ import {Movement} from "../components/Movement.ts";
 import {Health} from "../components/Health.ts";
 
 export class Enemy extends Entity {
-
     public init(texture: string, bullets: Phaser.Physics.Arcade.Group, speed: number) {
         this.setAngle(-90);
         this.arcadeBody.allowGravity = false;

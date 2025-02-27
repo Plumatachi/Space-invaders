@@ -6,6 +6,7 @@ import {Enemy} from "../entities/Enemy.ts";
 import {GameDataKeys} from "../GameDataKeys.ts";
 import {Health} from "../components/Health.ts";
 import {LevelManager} from "../components/LevelManager.ts";
+import {Boss} from "../entities/Boss.ts";
 
 export class MainGameScene extends Scene
 {
@@ -14,12 +15,15 @@ export class MainGameScene extends Scene
     private enemiesData: EnemiesData;
     private enemiesBullets: Phaser.Physics.Arcade.Group;
     private levelManager: LevelManager;
+    private bossBullets: Phaser.Physics.Arcade.Group;
+    private boss: Boss;
 
     private bg: Phaser.GameObjects.TileSprite;
     private planet: Phaser.GameObjects.Image;
     private player: Phaser.GameObjects.Sprite;
     private scoreText: Phaser.GameObjects.Text;
     private levelText: Phaser.GameObjects.Text;
+    // private bossHealthBar: Phaser.GameObjects.Graphics | null = null;
 
     constructor ()
     {
@@ -52,6 +56,7 @@ export class MainGameScene extends Scene
         this.load.image('player', 'player/Player_ship.png');
         this.load.image('player_blue', 'player/Player_ship_blue.png');
         this.load.image('player_yellow', 'player/Player_ship_yellow.png');
+        this.load.image('boss', 'enemies/Boss.png');
 
         this.load.spritesheet('alan', 'enemies/Alan.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('bon_bon', 'enemies/Bon_Bon.png', { frameWidth: 16, frameHeight: 16 });
@@ -75,9 +80,22 @@ export class MainGameScene extends Scene
         this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
         this.planet = this.add.image(0, -512, 'planet').setOrigin(0);
 
+        // this.bossActive = false;
+
         this.enemiesData = this.cache.json.get('enemies') as EnemiesData;
         this.levelManager = new LevelManager(this);
         this.registry.set('level', this.levelManager.getLevel());
+
+        /*if (this.levelManager.getLevel() % 10 === 0) {
+            this.spawnBoss();
+        } else {
+            this.time.addEvent({
+                delay: 150,
+                callback: this.spawnEnemy,
+                callbackScope: this,
+                loop: true
+            });
+        }*/
 
         this.input.keyboard?.addKey('R').once('down', () => {
             this.scene.restart();
@@ -120,8 +138,14 @@ export class MainGameScene extends Scene
             }
         );
 
+        this.bossBullets = this.physics.add.group({
+            classType: Bullet,
+            runChildUpdate: true,
+            maxSize: 20
+        });
+
         this.time.addEvent({
-            delay: 1500,
+            delay: 150,
             callback: this.spawnEnemy,
             callbackScope: this,
             loop: true
@@ -151,6 +175,27 @@ export class MainGameScene extends Scene
             frameRate: 8,
             repeat: -1
         });
+
+        /*this.anims.create({
+            key: 'boss_idle',
+            frames: this.anims.generateFrameNumbers('boss', { start: 0, end: 7 }),
+            frameRate: 3,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'boss_attack',
+            frames: this.anims.generateFrameNumbers('boss', { start: 8, end: 17 }),
+            frameRate: 6,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'boss_death',
+            frames: this.anims.generateFrameNumbers('boss', { start: 51, end: 64 }),
+            frameRate: 5,
+            repeat: 0
+        });*/
     }
 
     private addGroupsInPhysics() {
@@ -214,6 +259,29 @@ export class MainGameScene extends Scene
                 this.levelManager.registerKill();
             }
         );
+
+        /*this.physics.add.collider(this.player, this.boss,
+            (player, boss) => {
+                (player as Player).getComponent(Health)?.inc(-2);
+                (boss as Boss).getComponent(Health)?.inc(-1);
+                (player as Player).changeVelocity(0, 0);
+                (boss as Boss).changeVelocity(0, 0);
+            }
+        );
+
+        this.physics.add.collider(this.playerBullets, this.boss,
+            (bullet, boss) => {
+                console.log("Boss touché !");
+                (bullet as Bullet).disable();
+                (boss as Boss).getComponent(Health)?.inc(-1);
+            }
+        );
+
+        this.physics.add.collider(this.player, this.bossAttack,
+            (player, laser) => {
+                (player as Player).getComponent(Health)?.inc(-3);
+            }
+        );*/
     }
 
     update(timeSinceLaunch: number, deltaTime: number) {
@@ -221,6 +289,10 @@ export class MainGameScene extends Scene
         this.planet.y += 1;
 
         this.levelText.setText(`Niveau: ${this.registry.get('level')}`);
+
+        if (this.levelManager.getLevel() % 10 === 0 && !this.boss) {
+            this.spawnBoss();
+        }
 
         this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
@@ -253,5 +325,52 @@ export class MainGameScene extends Scene
         const enemy = this.enemies.get() as Enemy;
         enemy.init(enemyData.texture, this.enemiesBullets, enemyData.movementSpeed + (this.levelManager.getLevel() * 0.1));
         enemy.enable();
+    }
+
+    public spawnWave(): void {
+        const numEnemies = 10 + (this.levelManager.getLevel() * 2);
+
+        for (let i = 0; i < numEnemies; i++) {
+            this.showWarning("⚠️ Alien horde incoming !! ⚠️");
+            this.time.delayedCall(i * 300, () => {
+                this.spawnEnemy();
+            });
+        }
+    }
+
+    private spawnBoss() {
+        this.enemies.getChildren().forEach((enemy) => {
+            (enemy as Enemy).disable();
+        });
+
+        this.showWarning("⚠️ Boss Incoming !! ⚠️");
+        this.time.delayedCall(2000, () => {
+            this.boss = new Boss(this, this.cameras.main.centerX, 100, 'boss', this.bossBullets);
+            this.boss.setScale(8);
+            // this.physics.add.collider(this.playerBullets, this.boss, this.damageBoss, undefined, this);
+        });
+    }
+
+    private damageBoss(bullet: Bullet, boss: Boss) {
+        bullet.disable();
+        boss.takeDamage(5);
+        if (boss.health.getCurrentHealth() <= 0) {
+            this.boss = undefined;
+            this.levelManager.nextLevel();
+        }
+    }
+
+    private showWarning(message: string): void {
+        const warningText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, message, {
+            fontFamily: 'font',
+            fontSize: "48px",
+            color: "#ff0000",
+            fontStyle: "bold",
+            align: "center"
+        }).setOrigin(0.5);
+
+        this.time.delayedCall(2000, () => {
+            warningText.destroy();
+        });
     }
 }

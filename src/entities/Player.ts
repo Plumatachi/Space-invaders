@@ -14,7 +14,7 @@ export class Player extends Entity {
 
         this.scene = scene;
 
-        this.playerRateOfFire = 0.5;
+        this.playerRateOfFire = 0.1;
         this.lastShotTime = 0;
 
         this.setScale(6, 6);
@@ -23,21 +23,11 @@ export class Player extends Entity {
 
         this.addComponent(new WeaponComponent(bullets, scene.sound.add('sfx_laser1'), 4, 12, 1024));
         this.addComponent(new Movement());
-        this.addComponent(new Health(3));
+        this.addComponent(new Health(9999));
         this.selectPlayerShip(texture);
 
         if(this.scene.input.keyboard) {
             this.cursorKeys = this.scene.input.keyboard.createCursorKeys();
-
-            /*this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE).on('down', () => {
-                this.selectPlayerShip(1);
-            });
-            this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO).on('down', () => {
-                this.selectPlayerShip(2);
-            });
-            this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE).on('down', () => {
-                this.selectPlayerShip(3);
-            });*/
         }
     }
 
