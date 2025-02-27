@@ -32,6 +32,7 @@ export class Boss extends Entity {
 
     private init() {
         this.arcadeBody.setVelocity(0, 0);
+        this.setCircle(35, 30, 20);
         this.timer = this.scene.time.addEvent({
             delay: 2000,
             callback: this.executeAttackPattern,

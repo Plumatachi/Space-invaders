@@ -147,6 +147,8 @@ export class MainGameScene extends Scene
                 this.scoreText.setText(`Score: ${value}`);
             }
         );
+
+        this.spawnBoss();
     }
 
     private addAnimations() {
