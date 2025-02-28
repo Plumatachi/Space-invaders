@@ -16,14 +16,17 @@ export class MainGameScene extends Scene
     private enemiesBullets: Phaser.Physics.Arcade.Group;
     private levelManager: LevelManager;
     private bossBullets: Phaser.Physics.Arcade.Group;
+    private heartsGroup: Phaser.GameObjects.Group;
     private boss: Boss;
     private bossIsActive: boolean = false;
 
     private bg: Phaser.GameObjects.TileSprite;
-    private planet: Phaser.GameObjects.Image;
+    private backgroundElements: Phaser.GameObjects.Group;
+    private backgroundTimer: number;
     private player: Phaser.GameObjects.Sprite;
     private scoreText: Phaser.GameObjects.Text;
     private levelText: Phaser.GameObjects.Text;
+    private shootIndicator: Phaser.GameObjects.Sprite;
 
     constructor ()
     {
@@ -52,11 +55,17 @@ export class MainGameScene extends Scene
         this.load.setPath('assets');
 
         this.load.image('bg', 'background/Space_BG.png');
-        this.load.image('planet', 'background/planet.png');
+        this.load.image('blue_planet', 'background/Blue_planet.png');
+        this.load.image('green_planet', 'background/Green_planet.png');
+        this.load.image('pink_planet', 'background/Pink_planet.png');
+        this.load.image('sand_planet', 'background/Sand_planet.png');
+        this.load.image('green_cloud', 'background/Green_cloud.png');
+        this.load.image('black_void', 'background/Black_void.png');
         this.load.image('player', 'player/Player_ship.png');
         this.load.image('player_blue', 'player/Player_ship_blue.png');
         this.load.image('player_yellow', 'player/Player_ship_yellow.png');
         this.load.image('boss', 'enemies/Boss.png');
+        this.load.image('heart_full', 'UI/heart_full.png');
 
         this.load.spritesheet('alan', 'enemies/Alan.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('bon_bon', 'enemies/Bon_Bon.png', { frameWidth: 16, frameHeight: 16 });
@@ -64,6 +73,7 @@ export class MainGameScene extends Scene
         this.load.spritesheet('player_bullets', 'bullets/Player_charged_beam.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('enemies_bullets', 'bullets/Enemy_projectile.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('boss_bullets', 'bullets/Boss_bullets.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('shoot_indicator', 'UI/shoot_indicator.png', { frameWidth: 32, frameHeight: 16 });
 
         this.load.audio('sfx_laser1', 'Sounds/sfx_laser1.ogg');
         this.load.audio('sfx_laser2', 'Sounds/sfx_laser2.ogg');
@@ -72,16 +82,12 @@ export class MainGameScene extends Scene
         this.load.json('enemies', 'Data/enemies.json');
     }
 
-    create ()
-    {
-        // https://coolors.co/114b5f-1a936f-88d498-c6dabf-f3e9d2
-        const colorPalette: string[] = ["#0ad6de", "#00f3a6", "#88D498",
-            "#C6DABF", "#06e3a6"];
-
+    create () {
         this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
-        this.planet = this.add.image(0, -512, 'planet').setOrigin(0);
 
         this.bossIsActive = false;
+        this.backgroundElements = this.add.group();
+        this.backgroundTimer = 0;
 
         this.enemiesData = this.cache.json.get('enemies') as EnemiesData;
         this.levelManager = new LevelManager(this);
@@ -130,16 +136,19 @@ export class MainGameScene extends Scene
             this.scene.start('GameOverScene');
         });
 
+        this.heartsGroup = this.add.group();
+        this.updateHeartsDisplay();
         this.addAnimations();
         this.cameras.main.setBackgroundColor(0xF3E9D2);
         this.addGroupsInPhysics();
         this.initGroupCollision();
 
-        this.scoreText = this.add.text(15, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' });
-        this.levelText = this.add.text(15, 55, `Niveau: ${this.levelManager.getLevel()}`, {
+        this.shootIndicator = this.add.sprite(20, 50, 'shoot_indicator').setOrigin(0, 0).setScale(6, 6);
+        this.scoreText = this.add.text(this.cameras.main.width - 50, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' }).setOrigin(1, 0);
+        this.levelText = this.add.text(this.cameras.main.width - 50, 50, `Niveau: ${this.levelManager.getLevel()}`, {
             fontFamily: 'font',
             fontSize: '35px'
-        });
+        }).setOrigin(1, 0);
 
         this.registry.set<number>(GameDataKeys.PLAYER_SCORE, 0);
         this.registry.events.on('changedata-' + GameDataKeys.PLAYER_SCORE,
@@ -147,6 +156,18 @@ export class MainGameScene extends Scene
                 this.scoreText.setText(`Score: ${value}`);
             }
         );
+    }
+
+    private updateHeartsDisplay() {
+        this.heartsGroup.clear(true, true);
+        let health = (this.player as Player).getComponent(Health)?.getCurrentHealth();
+
+        for (let i = 0; i < health; i++) {
+            let heart = this.add.image(20 + i * (32 + 5), 20, 'heart_full');
+            heart.setScale(32/heart.width, 32/heart.height);
+
+            this.heartsGroup.add(heart);
+        }
     }
 
     private addAnimations() {
@@ -244,11 +265,51 @@ export class MainGameScene extends Scene
         );
     }
 
+    spawnBackgroundElement() {
+        const backgroundTextures = [
+            'blue_planet', 'green_planet', 'pink_planet', 'sand_planet',
+            'green_cloud', 'black_void'
+        ];
+
+        const texture = Phaser.Utils.Array.GetRandom(backgroundTextures);
+
+        const x = Phaser.Math.Between(100, this.cameras.main.width - 100);
+        const y = -500;
+
+        const element = this.add.image(x, y, texture);
+        element.setScale(Phaser.Math.FloatBetween(4, 7));
+        element.setAlpha(Phaser.Math.FloatBetween(0.5, 1));
+
+        this.backgroundElements.add(element);
+
+        this.tweens.add({
+            targets: element,
+            y: this.cameras.main.height + 100,
+            duration: Phaser.Math.Between(8000, 15000),
+            onComplete: () => {
+                element.destroy();
+            }
+        });
+    }
+
+
     update(timeSinceLaunch: number, deltaTime: number) {
         this.bg.tilePositionY -= 0.1 * deltaTime;
-        this.planet.y += 1;
+        this.backgroundTimer += deltaTime;
+
+        if (this.backgroundTimer > Phaser.Math.Between(5000, 10000)) {
+            this.spawnBackgroundElement();
+            this.backgroundTimer = 0;
+        }
 
         this.levelText.setText(`Niveau: ${this.registry.get('level')}`);
+        this.updateHeartsDisplay();
+
+        if ((this.player as Player).canShoot()) {
+            this.shootIndicator.setFrame(0);
+        } else {
+            this.shootIndicator.setFrame(1);
+        }
 
         this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
