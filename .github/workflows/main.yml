@@ -47,6 +47,6 @@ jobs:
         env:
           BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
           CHANNEL: html5
-          ITCH_GAME: Coda Space Invaders
-          ITCH_USER: Plumatachi
+          ITCH_GAME: coda-space-invaders
+          ITCH_USER: plumatachi
           PACKAGE: dist/
