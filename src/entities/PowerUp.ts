@@ -47,4 +47,8 @@ export class PowerUp extends Entity {
         this.setActive(false);
         this.disableBody(true, true);
     }
+
+    public getEffectName() {
+        return this.effect;
+    }
 }

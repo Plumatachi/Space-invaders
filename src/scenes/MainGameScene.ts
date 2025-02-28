@@ -443,15 +443,13 @@ export class MainGameScene extends Scene
 
             powerUp.setVelocity(0, 100);
 
-            this.physics.add.collider(powerUp, this.player,
-                (powerUp, player) => {
-                    (powerUp as PowerUp).applyEffect((player as Player), (powerUp as PowerUp));
-                    (powerUp as PowerUp).disable();
-                    (player as Player).setVelocity(0, 0);
-                });
+            this.physics.add.collider(powerUp, this.player, (powerUp, player) => {
+                (powerUp as PowerUp).applyEffect((player as Player), (powerUp as PowerUp));
+                (powerUp as PowerUp).disable();
+                (player as Player).setVelocity(0, 0);
+            });
         }
     }
-
 
     private showWarning(message: string): void {
         const warningText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, message, {
