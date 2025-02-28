@@ -1,10 +1,10 @@
 name: Build and Deploy
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - master
-  workflow_dispatch:
+      - develop
 
 jobs:
   build:
@@ -28,8 +28,8 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4.6.1
         with:
-          name: game-build
-          path: dist/
+          - name: game-build
+            path: dist/
 
   deploy:
     runs-on: ubuntu-latest
@@ -47,6 +47,6 @@ jobs:
         env:
           BUTLER_CREDENTIALS: ${{ secrets.BUTLER_CREDENTIALS }}
           CHANNEL: html5
-          ITCH_GAME: coda-shmup
-          ITCH_USER: surmoi
+          ITCH_GAME: Coda Space Invaders
+          ITCH_USER: Plumatachi
           PACKAGE: dist/
