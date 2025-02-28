@@ -15,7 +15,7 @@ export class Boss extends Entity {
         super(scene, x, y, texture);
         this.player = player;
 
-        this.health = new Health(100);
+        this.health = new Health(50);
         this.addComponent(this.health);
         this.addComponent(new WeaponComponent(bossBullets, 'sfx_laser2.ogg', 6, 15, 1024));
 
@@ -27,10 +27,6 @@ export class Boss extends Entity {
         this.attackInterval = 1000;
         this.numBullets = 10;
 
-        this.init();
-    }
-
-    private init() {
         this.arcadeBody.setVelocity(0, 0);
         this.setCircle(35, 30, 20);
         this.timer = this.scene.time.addEvent({
@@ -106,9 +102,9 @@ export class Boss extends Entity {
     }
 
     private shootBullet(angleOffset: number) {
-        const bullet = this.getComponent(WeaponComponent);
-        if (bullet) {
-            bullet.shoot(this, angleOffset);
+        const weaponComponent = this.getComponent(WeaponComponent);
+        if (weaponComponent) {
+            weaponComponent.shoot(this, angleOffset);
         }
     }
 

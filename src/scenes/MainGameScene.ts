@@ -5,26 +5,36 @@ import {Player} from "../entities/Player.ts";
 import {Enemy} from "../entities/Enemy.ts";
 import {GameDataKeys} from "../GameDataKeys.ts";
 import {Health} from "../components/Health.ts";
-import {LevelManager} from "../components/LevelManager.ts";
+import {LevelManager} from "../services/LevelManager.ts";
 import {Boss} from "../entities/Boss.ts";
 import {PowerUp} from "../entities/PowerUp.ts";
+import {EnemyManager} from "../services/EnemyManager.ts";
+import {PlayerManager} from "../services/PlayerManager.ts";
+import {CollisionManager} from "../services/CollisionManager.ts";
+import {PowerUpManager} from "../services/PowerUpManager.ts";
 
 export class MainGameScene extends Scene
 {
-    private playerBullets: Phaser.Physics.Arcade.Group;
+    /* private playerBullets: Phaser.Physics.Arcade.Group;
     private enemies: Phaser.Physics.Arcade.Group;
     private enemiesData: EnemiesData;
     private enemiesBullets: Phaser.Physics.Arcade.Group;
-    private levelManager: LevelManager;
     private bossBullets: Phaser.Physics.Arcade.Group;
-    private heartsGroup: Phaser.GameObjects.Group;
     private boss: Boss;
-    private bossIsActive: boolean = false;
+    private bossIsActive: boolean = false;*/
+
+    private levelManager: LevelManager;
+    private enemyManager: EnemyManager;
+    private playerManager: PlayerManager;
+    private collisionManager: CollisionManager;
+    private powerUpManager: PowerUpManager;
+
+    // private heartsGroup: Phaser.GameObjects.Group;
 
     private bg: Phaser.GameObjects.TileSprite;
     private backgroundElements: Phaser.GameObjects.Group;
     private backgroundTimer: number;
-    private player: Phaser.GameObjects.Sprite;
+    // private player: Phaser.GameObjects.Sprite;
     private scoreText: Phaser.GameObjects.Text;
     private levelText: Phaser.GameObjects.Text;
     private shootIndicator: Phaser.GameObjects.Sprite;
@@ -88,63 +98,44 @@ export class MainGameScene extends Scene
     create () {
         this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
 
-        this.bossIsActive = false;
+        // this.bossIsActive = false;
         this.backgroundElements = this.add.group();
         this.backgroundTimer = 0;
+        this.input.keyboard?.addKey('R').once('down', () => {
+            this.scene.restart();
+        });
 
-        this.enemiesData = this.cache.json.get('enemies') as EnemiesData;
+        // this.enemiesData = this.cache.json.get('enemies') as EnemiesData;
         this.levelManager = new LevelManager(this);
+        this.enemyManager = new EnemyManager(this, this.levelManager);
         this.registry.set('level', this.levelManager.getLevel());
 
         if (this.levelManager.getLevel() % 10 === 0) {
-            this.spawnBoss();
+            this.enemyManager.spawnBoss(this.playerManager.getPlayer());
         } else {
             this.time.addEvent({
                 delay: 1500,
-                callback: this.spawnEnemy,
+                callback: this.enemyManager.spawnEnemy,
                 callbackScope: this,
                 loop: true
             });
         }
 
-        this.input.keyboard?.addKey('R').once('down', () => {
-            this.scene.restart();
-        });
+        this.playerManager = new PlayerManager(this);
 
-        this.bossBullets = this.physics.add.group({
-            classType: Bullet,
-            runChildUpdate: true,
-            maxSize: 20,
-            createCallback: (bullet) => {
-                (bullet as Bullet).init();
-                (bullet as Bullet).play('boss_bullets_idle');
-            }
-        });
-
-        this.playerBullets = this.physics.add.group({
-            classType: Bullet,
-            runChildUpdate: true,
-            createCallback: (bullet) => {
-                (bullet as Bullet).init();
-                (bullet as Bullet).play('player_bullets_idle');
-            },
-            quantity: 8,
-            maxSize: 256
-        });
-
-        const selectedShip = this.registry.get('selectedShip') || 'player';
-        this.player = new Player(this, this.cameras.main.centerX, this.cameras.main.height - 128, selectedShip, this.playerBullets);
+        // const selectedShip = this.registry.get('selectedShip') || 'player';
+        /*this.player = new Player(this, this.cameras.main.centerX, this.cameras.main.height - 128, selectedShip, this.playerBullets);
         (this.player as Player).getComponent(Health)?.once('death', () => {
             (this.player as Player).disableBody(true, true);
             this.scene.start('GameOverScene');
-        });
+        });*/
 
-        this.heartsGroup = this.add.group();
-        this.updateHeartsDisplay();
+        /*this.heartsGroup = this.add.group();
+        this.updateHeartsDisplay();*/
         this.addAnimations();
         this.cameras.main.setBackgroundColor(0xF3E9D2);
-        this.addGroupsInPhysics();
-        this.initGroupCollision();
+        // this.addGroupsInPhysics();
+        // this.initGroupCollision();
 
         this.shootIndicator = this.add.sprite(20, 50, 'shoot_indicator').setOrigin(0, 0).setScale(6, 6);
         this.scoreText = this.add.text(this.cameras.main.width - 50, 15, `Score: 0`, { fontFamily: 'font', fontSize: '35px' }).setOrigin(1, 0);
@@ -161,7 +152,7 @@ export class MainGameScene extends Scene
         );
     }
 
-    private updateHeartsDisplay() {
+    /*private updateHeartsDisplay() {
         this.heartsGroup.clear(true, true);
         let health = (this.player as Player).getComponent(Health)?.getCurrentHealth();
 
@@ -171,116 +162,15 @@ export class MainGameScene extends Scene
 
             this.heartsGroup.add(heart);
         }
-    }
+    }*/
 
     private addAnimations() {
-        Object.keys(this.enemiesData).forEach(enemyKey => {
-            this.anims.create({
-                key: `${enemyKey}_idle`,
-                frames: this.anims.generateFrameNumbers(enemyKey, { start: 0, end: 4 }),
-                frameRate: 8,
-                repeat: -1
-            });
-        });
-
-        this.anims.create({
-            key: 'player_bullets_idle',
-            frames: this.anims.generateFrameNumbers('player_bullets', { start: 0, end: 4 }),
-            frameRate: 8,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'enemies_bullet_idle',
-            frames: this.anims.generateFrameNumbers('enemies_bullet', { start: 0, end: 4 }),
-            frameRate: 8,
-            repeat: -1
-        });
-
-        this.anims.create({
-          key: 'boss_bullets_idle',
-          frames: this.anims.generateFrameNumbers('boss_bullets', { start: 0, end: 4 }),
-          frameRate: 8,
-          repeat: -1
-        });
-
         this.anims.create({
             key: 'power_up_idle',
             frames: this.anims.generateFrameNumbers('power_up', { start: 0, end: 3 }),
             frameRate: 4,
             repeat: -1
         });
-    }
-
-    private addGroupsInPhysics() {
-        this.enemiesBullets = this.physics.add.group({
-            classType: Bullet,
-            runChildUpdate: true,
-            defaultKey: 'enemies_bullets',
-            defaultFrame: 'bullets/Enemy_projectile.png',
-            createCallback: (bullet) => {
-                (bullet as Bullet).init();
-            },
-            quantity: 8,
-            maxSize: 256
-        });
-        GroupUtils.preallocateGroup(this.enemiesBullets, 5);
-
-        this.enemies = this.physics.add.group({
-            classType: Enemy,
-            createCallback: (enemy) => {
-                (enemy as Enemy).init('alan', this.enemiesBullets, 0.2);
-            }
-        });
-
-        this.physics.add.existing(this.player);
-        const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
-        playerBody.setOffset(-1, -2);
-    }
-
-    private initGroupCollision() {
-        this.physics.add.collider(this.playerBullets, this.enemies,
-            (bullet, enemy) => {
-                (bullet as Bullet).disable();
-                const x = (enemy as Enemy).x;
-                const y = (enemy as Enemy).y;
-                (enemy as Enemy).disable();
-                (enemy as Enemy).changeVelocity(0, 0);
-                this.registry.inc(GameDataKeys.PLAYER_SCORE, 1);
-                this.levelManager.registerKill();
-
-                this.spawnPowerUp(x, y);
-            }
-        );
-
-        this.physics.add.collider(this.playerBullets, this.enemiesBullets,
-            (bullet, enemyBullet) => {
-            (bullet as Bullet).disable();
-                (enemyBullet as Bullet).disable();
-            }
-        );
-
-        this.physics.add.collider(this.player, this.enemiesBullets,
-            (player, enemyBullet) => {
-                if (!(player as Player).isInvincible()) {
-                    (player as Player).getComponent(Health)?.inc(-1);
-                    (player as Player).changeVelocity(0, 0);
-                }
-                (enemyBullet as Bullet).disable();
-            }
-        );
-
-        this.physics.add.collider(this.player, this.enemies,
-            (player, enemy) => {
-                if (!(player as Player).isInvincible()) {
-                    (player as Player).getComponent(Health)?.inc(-1);
-                }
-                const enemyHealth = (enemy as Enemy).getComponent(Health);
-                enemyHealth?.inc(-enemyHealth?.getMaxHealth());
-                (player as Player).changeVelocity(0, 0);
-                this.levelManager.registerKill();
-            }
-        );
     }
 
     spawnBackgroundElement() {
@@ -321,21 +211,22 @@ export class MainGameScene extends Scene
         }
 
         this.levelText.setText(`Niveau: ${this.registry.get('level')}`);
-        this.updateHeartsDisplay();
+        this.playerManager.updateHealthDisplay();
+        // this.updateHeartsDisplay();
 
-        if ((this.player as Player).canShoot()) {
+        if (this.playerManager.getPlayer().canShoot()) {
             this.shootIndicator.setFrame(0);
         } else {
             this.shootIndicator.setFrame(1);
         }
 
-        this.playerBullets.getChildren().forEach(bullet => {
+        /*this.playerBullets.getChildren().forEach(bullet => {
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
                 (bullet as Bullet).disable();
             }
-        });
+        });*/
 
-        this.enemies.getChildren().forEach(enemy => {
+        /*this.enemies.getChildren().forEach(enemy => {
             if ((enemy as Phaser.GameObjects.Arc).y >= this.cameras.main.height + (enemy as Phaser.GameObjects.Arc).displayHeight) {
                 (enemy as Enemy).disable();
             }
@@ -345,10 +236,10 @@ export class MainGameScene extends Scene
             if ((bullet as Phaser.GameObjects.Rectangle).y < -(bullet as Phaser.GameObjects.Rectangle).displayHeight) {
                 (bullet as Bullet).disable();
             }
-        });
+        });*/
     }
 
-    private spawnEnemy() {
+    /*private spawnEnemy() {
         if (this.bossIsActive || this.enemies.countActive(true) >= this.levelManager.getMaxEnemiesPerWave()) {
             return;
         }
@@ -360,9 +251,9 @@ export class MainGameScene extends Scene
         const enemy = this.enemies.get() as Enemy;
         enemy.init(enemyData.texture, this.enemiesBullets, enemyData.movementSpeed + (this.levelManager.getLevel() * 0.1));
         enemy.enable();
-    }
+    }*/
 
-    public spawnWave(): void {
+    /*public spawnWave(): void {
         const numEnemies = 10 + (this.levelManager.getLevel() * 2);
 
         for (let i = 0; i < numEnemies; i++) {
@@ -371,9 +262,9 @@ export class MainGameScene extends Scene
                 this.spawnEnemy();
             });
         }
-    }
+    }*/
 
-    private spawnBoss() {
+    /*private spawnBoss() {
         this.bossIsActive = true;
 
         this.enemies.getChildren().forEach((enemy) => {
@@ -430,9 +321,9 @@ export class MainGameScene extends Scene
                 }
             );
         });
-    }
+    }*/
 
-    private spawnPowerUp(x: number, y: number) {
+    /*private spawnPowerUp(x: number, y: number) {
         if (Phaser.Math.Between(0, 10) > 7) {
             const powerUpsData = this.cache.json.get('powerUps');
             const randomPowerUp = Phaser.Utils.Array.GetRandom(powerUpsData);
@@ -449,9 +340,9 @@ export class MainGameScene extends Scene
                 (player as Player).setVelocity(0, 0);
             });
         }
-    }
+    }*/
 
-    private showWarning(message: string): void {
+    /*private showWarning(message: string): void {
         const warningText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, message, {
             fontFamily: 'font',
             fontSize: "48px",
@@ -463,5 +354,5 @@ export class MainGameScene extends Scene
         this.time.delayedCall(2000, () => {
             warningText.destroy();
         });
-    }
+    }*/
 }

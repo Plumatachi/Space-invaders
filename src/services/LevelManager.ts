@@ -1,4 +1,4 @@
-export class LevelManager implements IComponent {
+export class LevelManager {
     private scene: Phaser.Scene;
     private level: number;
     private enemiesKilled: number;
