@@ -1,6 +1,9 @@
 {
   "player": {
     "movementSpeed": 0.6,
+    "rateOfFire": 0.5,
+    "health": 10,
+    "invincible": false,
     "texture": "player",
     "body": {
       "radius": 9,
@@ -10,6 +13,9 @@
   },
   "player_blue": {
     "movementSpeed": 0.9,
+    "rateOfFire": 0.4,
+    "health": 5,
+    "invincible": false,
     "texture": "player_blue",
     "body": {
       "radius": 9,
@@ -19,6 +25,9 @@
   },
   "player_yellow": {
     "movementSpeed": 1.2,
+    "rateOfFire": 0.3,
+    "health": 3,
+    "invincible": false,
     "texture": "player_yellow",
     "body": {
       "radius": 9,
