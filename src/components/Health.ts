@@ -7,6 +7,7 @@ export class Health extends Phaser.Events.EventEmitter implements IComponent {
 
         this.currentHealth = value;
         this.maxHealth = value;
+
     }
 
     public getCurrentHealth(): number {

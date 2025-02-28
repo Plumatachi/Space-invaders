@@ -68,4 +68,8 @@ export class Player extends Entity {
         this.x = Phaser.Math.Clamp(this.x, this.displayWidth/2, this.scene.cameras.main.width - this.displayWidth/2);
         this.y = Phaser.Math.Clamp(this.y, this.displayHeight/2, this.scene.cameras.main.height - this.displayHeight/2);
     }
+
+    public canShoot(): boolean {
+        return this.scene.time.now - this.lastShotTime > this.playerRateOfFire * 1000;
+    }
 }
