@@ -39,8 +39,8 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4.1.9
         with:
-          - name: game-build
-            path: dist/
+         name: game-build
+         path: dist/
 
       - name: Upload to itch.io
         uses: yeslayla/butler-publish-itchio-action@v1.0.3
