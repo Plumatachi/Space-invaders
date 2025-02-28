@@ -28,8 +28,8 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4.6.1
         with:
-          - name: game-build
-            path: dist/
+          name: game-build
+          path: dist/
 
   deploy:
     runs-on: ubuntu-latest
