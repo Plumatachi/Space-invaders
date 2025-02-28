@@ -1,0 +1,26 @@
+[
+  {
+    "texture": "power_up",
+    "effect": "rapidfire",
+    "duration": 5000,
+    "effectValue": 0.1
+  },
+  {
+    "texture": "power_up",
+    "effect": "bigbullets",
+    "duration": 5000,
+    "effectValue": 20
+  },
+  {
+    "texture": "power_up",
+    "effect": "speed",
+    "duration": 5000,
+    "effectValue": 1.5
+  },
+  {
+    "texture": "power_up",
+    "effect": "invincibility",
+    "duration": 5000,
+    "effectValue": true
+  }
+]

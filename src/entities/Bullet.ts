@@ -1,5 +1,6 @@
 export class Bullet extends Phaser.Physics.Arcade.Sprite {
     public arcadeBody: Phaser.Physics.Arcade.Body;
+    public isPiercing: boolean = false;
 
     public init() {
         this.arcadeBody = this.body as Phaser.Physics.Arcade.Body;
@@ -37,5 +38,13 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
             || this.x < -this.displayWidth) {
             this.disable();
         }
+    }
+
+    public setBulletSize(size: number) {
+        this.setScale(size, size);
+    }
+
+    public enablePiercing(bool: boolean) {
+        this.isPiercing = bool;
     }
 }

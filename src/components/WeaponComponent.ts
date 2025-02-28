@@ -28,4 +28,13 @@ export class WeaponComponent implements IComponent {
             bullet.enable(entity.x, entity.y, this.bulletWidth, this.bulletHeight, velocityX, velocityY);
         }
     }
+
+    public modifyBullet(size: number, isPiercing: boolean) {
+        this.bullets.getChildren().forEach(bullet => {
+            (bullet as Bullet).setBulletSize(size);
+        });
+        this.bullets.getChildren().forEach(bullet => {
+            (bullet as Bullet).enablePiercing(isPiercing);
+        });
+    }
 }

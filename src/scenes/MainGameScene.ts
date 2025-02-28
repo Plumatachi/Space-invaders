@@ -7,6 +7,7 @@ import {GameDataKeys} from "../GameDataKeys.ts";
 import {Health} from "../components/Health.ts";
 import {LevelManager} from "../components/LevelManager.ts";
 import {Boss} from "../entities/Boss.ts";
+import {PowerUp} from "../entities/PowerUp.ts";
 
 export class MainGameScene extends Scene
 {
@@ -74,12 +75,14 @@ export class MainGameScene extends Scene
         this.load.spritesheet('enemies_bullets', 'bullets/Enemy_projectile.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('boss_bullets', 'bullets/Boss_bullets.png', { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet('shoot_indicator', 'UI/shoot_indicator.png', { frameWidth: 32, frameHeight: 16 });
+        this.load.spritesheet('power_up', 'UI/power_up.png', { frameWidth: 16, frameHeight:16 });
 
         this.load.audio('sfx_laser1', 'Sounds/sfx_laser1.ogg');
         this.load.audio('sfx_laser2', 'Sounds/sfx_laser2.ogg');
 
         this.load.json('playerShips', 'Data/playerShips.json');
         this.load.json('enemies', 'Data/enemies.json');
+        this.load.json('powerUps', 'Data/powerUps.json');
     }
 
     create () {
@@ -200,6 +203,13 @@ export class MainGameScene extends Scene
           frameRate: 8,
           repeat: -1
         });
+
+        this.anims.create({
+            key: 'power_up_idle',
+            frames: this.anims.generateFrameNumbers('power_up', { start: 0, end: 3 }),
+            frameRate: 4,
+            repeat: -1
+        });
     }
 
     private addGroupsInPhysics() {
@@ -232,33 +242,41 @@ export class MainGameScene extends Scene
         this.physics.add.collider(this.playerBullets, this.enemies,
             (bullet, enemy) => {
                 (bullet as Bullet).disable();
+                const x = (enemy as Enemy).x;
+                const y = (enemy as Enemy).y;
                 (enemy as Enemy).disable();
                 (enemy as Enemy).changeVelocity(0, 0);
                 this.registry.inc(GameDataKeys.PLAYER_SCORE, 1);
                 this.levelManager.registerKill();
+
+                this.spawnPowerUp(x, y);
             }
         );
 
         this.physics.add.collider(this.playerBullets, this.enemiesBullets,
             (bullet, enemyBullet) => {
-                (bullet as Bullet).disable();
+            (bullet as Bullet).disable();
                 (enemyBullet as Bullet).disable();
             }
         );
 
         this.physics.add.collider(this.player, this.enemiesBullets,
             (player, enemyBullet) => {
-                (player as Player).getComponent(Health)?.inc(-1);
-                (player as Player).changeVelocity(0, 0);
+                if (!(player as Player).isInvincible()) {
+                    (player as Player).getComponent(Health)?.inc(-1);
+                    (player as Player).changeVelocity(0, 0);
+                }
                 (enemyBullet as Bullet).disable();
             }
         );
 
         this.physics.add.collider(this.player, this.enemies,
             (player, enemy) => {
+                if (!(player as Player).isInvincible()) {
+                    (player as Player).getComponent(Health)?.inc(-1);
+                }
                 const enemyHealth = (enemy as Enemy).getComponent(Health);
                 enemyHealth?.inc(-enemyHealth?.getMaxHealth());
-                (player as Player).getComponent(Health)?.inc(-1);
                 (player as Player).changeVelocity(0, 0);
                 this.levelManager.registerKill();
             }
@@ -413,6 +431,27 @@ export class MainGameScene extends Scene
             );
         });
     }
+
+    private spawnPowerUp(x: number, y: number) {
+        if (Phaser.Math.Between(0, 10) > 7) {
+            const powerUpsData = this.cache.json.get('powerUps');
+            const randomPowerUp = Phaser.Utils.Array.GetRandom(powerUpsData);
+
+            const powerUp = new PowerUp(this, x, y, randomPowerUp);
+            this.add.existing(powerUp);
+            this.physics.add.existing(powerUp);
+
+            powerUp.setVelocity(0, 100);
+
+            this.physics.add.collider(powerUp, this.player,
+                (powerUp, player) => {
+                    (powerUp as PowerUp).applyEffect((player as Player), (powerUp as PowerUp));
+                    (powerUp as PowerUp).disable();
+                    (player as Player).setVelocity(0, 0);
+                });
+        }
+    }
+
 
     private showWarning(message: string): void {
         const warningText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, message, {
