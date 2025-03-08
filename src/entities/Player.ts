@@ -5,6 +5,8 @@ import {Health} from "../components/Health.ts";
 
 export class Player extends Entity {
     public playerShipData: PlayerShipData;
+    private initialRateOfFire: number;
+    private initialSpeed: number;
     private lastShotTime: number;
     private cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
     private powerUpText: Phaser.GameObjects.Text;
@@ -19,6 +21,9 @@ export class Player extends Entity {
         this.setTexture(this.playerShipData.texture);
         this.arcadeBody.setCircle(this.playerShipData.body.radius, this.playerShipData.body.offsetX, this.playerShipData.body.offsetY);
         this.arcadeBody.updateCenter();
+
+        this.initialRateOfFire = this.playerShipData.rateOfFire;
+        this.initialSpeed = this.playerShipData.movementSpeed;
 
         this.lastShotTime = 0;
 
@@ -82,7 +87,7 @@ export class Player extends Entity {
                 this.playerShipData.rateOfFire = JSON.parse(effectValue);
                 this.showPowerUpEffect("Rate of fire up!");
                 setTimeout(() => {
-                    this.playerShipData.rateOfFire = 1;
+                    this.playerShipData.rateOfFire = this.initialRateOfFire;
                 }, duration);
                 break;
             case 'bigbullets':
@@ -92,11 +97,10 @@ export class Player extends Entity {
                 }, duration);
                 break;
             case 'speed':
-                const originalSpeed = this.playerShipData.movementSpeed;
                 this.playerShipData.movementSpeed += JSON.parse(effectValue);
                 this.showPowerUpEffect("Speed up!");
                 setTimeout(() => {
-                    this.playerShipData.movementSpeed = originalSpeed;
+                    this.playerShipData.movementSpeed = this.initialSpeed;
                 }, duration);
                 break;
             case 'invincibility':

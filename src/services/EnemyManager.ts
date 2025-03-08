@@ -10,7 +10,7 @@ export class EnemyManager {
     private scene: Scene;
     private enemies: Phaser.Physics.Arcade.Group;
     private enemiesData: EnemiesData;
-    private boss: Boss | null = null;
+    private boss: Boss;
     private bossIsActive: boolean = false;
     private levelManager: LevelManager;
     private enemyBullets: Phaser.Physics.Arcade.Group;
@@ -19,6 +19,8 @@ export class EnemyManager {
     constructor(scene: Scene, levelManager: LevelManager) {
         this.scene = scene;
         this.levelManager = levelManager;
+        this.bossIsActive = false;
+        this.enemiesData = this.scene.cache.json.get('enemies');
 
         this.enemyBullets = this.scene.physics.add.group({
             classType: Bullet,
@@ -50,47 +52,7 @@ export class EnemyManager {
             }
         });
 
-        // this.addAnimations();
-    }
-
-    spawnEnemy() {
-        if (this.bossIsActive || this.enemies.countActive(true) >= this.levelManager.getMaxEnemiesPerWave()) {
-            return;
-        }
-
-        const enemyKeys = Object.keys(this.scene.cache.json.get('enemies'));
-        const randomKey = Phaser.Utils.Array.GetRandom(enemyKeys);
-        const enemyData = this.scene.cache.json.get('enemies')[randomKey];
-
-        const enemy = this.enemies.get() as Enemy;
-        enemy.init(enemyData.texture, this.enemyBullets, enemyData.movementSpeed + (this.levelManager.getLevel() * 0.1));
-        enemy.enable();
-    }
-
-    spawnWave() {
-        for (let i = 0; i < 10 + this.levelManager.getLevel() * 2; i++) {
-            this.scene.time.delayedCall(i * 300, () => this.spawnEnemy());
-        }
-    }
-
-    spawnBoss(player: Phaser.GameObjects.Sprite) {
-        this.bossIsActive = true;
-        this.scene.cameras.main.shake(300, 0.01);
-
-        this.scene.time.delayedCall(2000, () => {
-            this.boss = new Boss(this.scene, this.scene.cameras.main.centerX, -300, 'boss', this.bossBullets, player);
-            this.scene.tweens.add({
-                targets: this.boss,
-                y: this.scene.cameras.main.centerY - 400,
-                duration: 2000,
-                ease: 'power2',
-                onComplete: () => this.boss?.startMoving(),
-            });
-
-            this.boss.getComponent(Health)?.once('death', () => {
-                this.bossIsActive = false;
-            });
-        });
+        this.addAnimations();
     }
 
     private addAnimations() {
@@ -118,6 +80,53 @@ export class EnemyManager {
         });
     }
 
+    spawnEnemy() {
+        if (this.bossIsActive || this.enemies.countActive(true) >= this.levelManager.getMaxEnemiesPerWave()) {
+            return;
+        }
+
+        const enemyKeys = Object.keys(this.scene.cache.json.get('enemies'));
+        const randomKey = Phaser.Utils.Array.GetRandom(enemyKeys);
+        const enemyData = this.scene.cache.json.get('enemies')[randomKey];
+
+        const enemy = this.enemies.get() as Enemy;
+        enemy.init(enemyData.texture, this.enemyBullets, enemyData.movementSpeed + (this.levelManager.getLevel() * 0.1));
+        enemy.enable();
+    }
+
+    spawnWave() {
+        for (let i = 0; i < 10 + this.levelManager.getLevel() * 2; i++) {
+            this.showWarning("⚠️ Alien horde incoming !! ⚠️");
+            this.scene.time.delayedCall(i * 300, () => this.spawnEnemy());
+        }
+    }
+
+    spawnBoss(player: Phaser.GameObjects.Sprite) {
+        this.bossIsActive = true;
+        this.scene.cameras.main.shake(300, 0.01);
+        this.showWarning("⚠️ Boss Incoming !! ⚠️");
+
+        this.scene.time.delayedCall(2000, () => {
+            this.boss = new Boss(this.scene, this.scene.cameras.main.centerX, -300, 'boss', this.bossBullets, player);
+            this.scene.tweens.add({
+                targets: this.boss,
+                y: this.scene.cameras.main.centerY - 400,
+                duration: 2000,
+                ease: 'power2',
+                onComplete: () => {
+                    this.boss?.startMoving();
+                    console.log("📢 Emission de l'événement bossSpawned avec boss :", this.boss);
+                    this.scene.events.emit('bossSpawned', this.boss);
+                    console.log("✅ bossSpawned a bien été émis !");
+                },
+            });
+
+            this.boss.getComponent(Health)?.once('death', () => {
+                this.bossIsActive = false;
+            });
+        });
+    }
+
     public update(timeSinceLaunch, deltaTime: number) {
         this.enemies.getChildren().forEach(enemy => {
             if ((enemy as Phaser.GameObjects.Arc).y >= this.scene.cameras.main.height + (enemy as Phaser.GameObjects.Arc).displayHeight) {
@@ -130,6 +139,36 @@ export class EnemyManager {
                 (bullet as Bullet).disable();
             }
         });
+    }
+
+    private showWarning(message: string): void {
+        const warningText = this.scene.add.text(this.scene.cameras.main.centerX, this.scene.cameras.main.centerY, message, {
+            fontFamily: 'font',
+            fontSize: "48px",
+            color: "#ff0000",
+            fontStyle: "bold",
+            align: "center"
+        }).setOrigin(0.5);
+
+        this.scene.time.delayedCall(2000, () => {
+            warningText.destroy();
+        });
+    }
+
+    public getEnemies() {
+        return this.enemies;
+    }
+
+    public getBoss() {
+        return this.boss;
+    }
+
+    public getEnemyBullets() {
+        return this.enemyBullets;
+    }
+
+    public getBossBullets() {
+        return this.bossBullets;
     }
 }
 

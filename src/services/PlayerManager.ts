@@ -10,6 +10,7 @@ export class PlayerManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+        this.heartsGroup = this.scene.add.group();
 
         this.playerBullets = this.scene.physics.add.group({
             classType: Bullet,
@@ -23,7 +24,7 @@ export class PlayerManager {
         });
 
         this.createPlayer();
-        // this.addAnimation();
+        this.addAnimation();
     }
 
     private createPlayer() {
@@ -66,6 +67,10 @@ export class PlayerManager {
 
     public getPlayer() {
         return this.player;
+    }
+
+    public getPlayerBullets() {
+        return this.playerBullets;
     }
 
     public update(timeSinceLaunch: number, delta: number) {

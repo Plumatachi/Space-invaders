@@ -27,6 +27,7 @@ export class Boss extends Entity {
         this.attackInterval = 1000;
         this.numBullets = 10;
 
+        this.setScale(8);
         this.arcadeBody.setVelocity(0, 0);
         this.setCircle(35, 30, 20);
         this.timer = this.scene.time.addEvent({

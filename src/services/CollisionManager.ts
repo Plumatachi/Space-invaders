@@ -25,10 +25,14 @@ export class CollisionManager {
                 if (!(player as Player).isInvincible()) {
                     (player as Player).getComponent(Health)?.inc(-1);
                 }
+                const x = (enemy as Enemy).x;
+                const y = (enemy as Enemy).y;
                 const enemyHealth = (enemy as Enemy).getComponent(Health);
                 enemyHealth?.inc(-enemyHealth?.getMaxHealth());
                 (player as Player).changeVelocity(0, 0);
                 this.levelManager.registerKill();
+
+                this.powerUpManager.spawnPowerUp(x, y);
             }
         );
 
@@ -37,7 +41,8 @@ export class CollisionManager {
                 (bullet as Bullet).disable();
                 const x = (enemy as Enemy).x;
                 const y = (enemy as Enemy).y;
-                (enemy as Enemy).disable();
+                const enemyHealth = (enemy as Enemy).getComponent(Health);
+                enemyHealth?.inc(-enemyHealth?.getMaxHealth());
                 (enemy as Enemy).changeVelocity(0, 0);
                 this.scene.registry.inc(GameDataKeys.PLAYER_SCORE, 1);
                 this.levelManager.registerKill();
@@ -64,42 +69,32 @@ export class CollisionManager {
         );
     }
 
-    checkCollisionsPlayerPowerUp(player: Player, powerUp: PowerUp) {
-        this.scene.physics.add.collider(powerUp, player, (powerUp, player) => {
+    checkCollisionsPlayerPowerUp(player: Player, powerUpGroup: Phaser.Physics.Arcade.Group) {
+        this.scene.physics.add.overlap(player, powerUpGroup, (player, powerUp) => {
             (powerUp as PowerUp).applyEffect((player as Player), (powerUp as PowerUp));
             (powerUp as PowerUp).disable();
-            (player as Player).setVelocity(0, 0);
         });
     }
 
-    checkCollisionsPlayerBoss(player: Player, boss: Boss, playerBullets: Phaser.Physics.Arcade.Group, bossBullets:Phaser.Physics.Arcade.Group) {
-        this.scene.physics.add.overlap(player, boss,
-            (player, boss) => {
-                (player as Player).getComponent(Health)?.inc(-2);
-                (boss as Boss).takeDamage(-1);
-            }
-        );
+    checkCollisionsPlayerBoss(player: Player, boss: Boss, playerBullets: Phaser.Physics.Arcade.Group, bossBullets: Phaser.Physics.Arcade.Group) {
+        this.scene.physics.add.overlap(player, boss, (player, boss) => {
+            (player as Player).getComponent(Health)?.inc(-2);
+            (boss as Boss).takeDamage(-1);
+        });
 
-        this.scene.physics.add.overlap(boss, playerBullets,
-            (boss, bullet) => {
-                (boss as Boss).takeDamage(-1);
-                (bullet as Bullet).disable();
+        this.scene.physics.add.overlap(boss, playerBullets, (boss, bullet) => {
+            (boss as Boss).takeDamage(-1);
+            (bullet as Bullet).disable();
+        });
 
-            }
-        );
+        this.scene.physics.add.overlap(player, bossBullets, (player, bossBullet) => {
+            (player as Player).getComponent(Health)?.inc(-3);
+            (bossBullet as Bullet).disable();
+        });
 
-        this.scene.physics.add.overlap(player, bossBullets,
-            (player, bossBullet) => {
-                (player as Player).getComponent(Health)?.inc(-3);
-                (bossBullet as Bullet).disable();
-            }
-        );
-
-        this.scene.physics.add.collider(playerBullets, bossBullets,
-            (bullet, bossBullet) => {
-                (bullet as Bullet).disable();
-                (bossBullet as Bullet).disable();
-            }
-        );
+        this.scene.physics.add.collider(playerBullets, bossBullets, (bullet, bossBullet) => {
+            (bullet as Bullet).disable();
+            (bossBullet as Bullet).disable();
+        });
     }
 }
