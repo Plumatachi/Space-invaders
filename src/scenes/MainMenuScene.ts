@@ -51,7 +51,7 @@ export class MainMenuScene extends Phaser.Scene {
         this.input.keyboard?.on('keydown-RIGHT', () => this.changeSelection(1));
         this.input.keyboard?.once('keydown-SPACE', () => {
             this.registry.set('selectedShip', this.shipKeys[this.selectedShipIndex]);
-            this.scene.start('MainGameScene');
+            this.scene.start('TutoScene');
         });
     }
 
