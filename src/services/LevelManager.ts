@@ -1,6 +1,9 @@
-export class LevelManager implements IComponent {
+import {EnemyManager} from "./EnemyManager.ts";
+
+export class LevelManager {
     private scene: Phaser.Scene;
     private level: number;
+    private enemyManager!: EnemyManager;
     private enemiesKilled: number;
     private enemiesToKill: number;
     private maxEnemiesPerWave: number;
@@ -11,6 +14,10 @@ export class LevelManager implements IComponent {
         this.enemiesKilled = 0;
         this.enemiesToKill = 10;
         this.maxEnemiesPerWave = 30;
+    }
+
+    public setEnemyManager(enemyManager: EnemyManager): void {
+        this.enemyManager = enemyManager;
     }
 
     public getLevel(): number {
@@ -42,14 +49,12 @@ export class LevelManager implements IComponent {
 
         // Si le niveau est un multiple de 5 (hors multiples de 10), c'est une vague spéciale
         if (this.level % 10 !== 0 && this.level % 5 === 0) {
-            this.scene.spawnWave();
+            this.enemyManager.spawnWave();
         }
 
         // Si le niveau est un multiple de 10, un boss apparaît
         if (this.level % 10 === 0) {
-            this.scene.spawnBoss();
+            this.enemyManager.spawnBoss();
         }
     }
-
-
 }
