@@ -26,15 +26,17 @@ export class WeaponComponent implements IComponent {
             const velocityY = forwardY * this.bulletSpeed;
 
             bullet.enable(entity.x, entity.y, this.bulletWidth, this.bulletHeight, velocityX, velocityY);
+            bullet.setScale(this.bulletWidth, this.bulletHeight);
         }
     }
 
-    public modifyBullet(size: number, isPiercing: boolean) {
-        this.bullets.getChildren().forEach(bullet => {
-            (bullet as Bullet).setBulletSize(size);
-        });
-        this.bullets.getChildren().forEach(bullet => {
-            (bullet as Bullet).enablePiercing(isPiercing);
-        });
+    public setBulletSize(size: number) {
+        this.bulletWidth = size;
+        this.bulletHeight = size;
+    }
+
+    public resetBulletSize() {
+        this.bulletWidth = 4;
+        this.bulletHeight = 12;
     }
 }
