@@ -8,8 +8,6 @@ export class GameOverScene extends Phaser.Scene {
 
     preload() {
         AssetManager.loadAssets(this);
-
-        this.load.font('font', 'font/kenvector_future.ttf');
     }
 
     create() {

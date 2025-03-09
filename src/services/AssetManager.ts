@@ -22,6 +22,9 @@ export class AssetManager {
 
         scene.load.setPath('assets');
 
+        // Chargement de la police
+        scene.load.font('font', 'font/kenvector_future.ttf');
+
         // Chargement des assets
         const images = {
             'bg': 'background/Space_BG.png',

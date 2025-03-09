@@ -2,7 +2,6 @@ import {AssetManager} from "../services/AssetManager.ts";
 
 export class MainMenuScene extends Phaser.Scene {
     private bg: Phaser.GameObjects.TileSprite;
-    private playerShip: Phaser.GameObjects.Sprite;
     private playerShips: Phaser.GameObjects.Sprite[] = [];
     private selectedShipIndex: number = 0;
     private shipKeys: string[] = ['player', 'player_blue', 'player_yellow']
@@ -13,8 +12,6 @@ export class MainMenuScene extends Phaser.Scene {
 
     preload() {
         AssetManager.loadAssets(this);
-
-        this.load.font('font', 'font/kenvector_future.ttf');
     }
 
     create() {
