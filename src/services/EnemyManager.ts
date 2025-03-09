@@ -115,9 +115,7 @@ export class EnemyManager {
                 ease: 'power2',
                 onComplete: () => {
                     this.boss?.startMoving();
-                    console.log("📢 Emission de l'événement bossSpawned avec boss :", this.boss);
                     this.scene.events.emit('bossSpawned', this.boss);
-                    console.log("✅ bossSpawned a bien été émis !");
                 },
             });
 
