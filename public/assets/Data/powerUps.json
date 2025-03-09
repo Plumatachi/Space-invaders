@@ -9,7 +9,7 @@
     "texture": "power_up",
     "effect": "bigbullets",
     "duration": 5000,
-    "effectValue": 20
+    "effectValue": 12
   },
   {
     "texture": "power_up",

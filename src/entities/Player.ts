@@ -91,17 +91,26 @@ export class Player extends Entity {
                 }, duration);
                 break;
             case 'bigbullets':
-                this.getComponent(WeaponComponent)?.modifyBullet(JSON.parse(effectValue), false);
-                setTimeout(() => {
-                    this.getComponent(WeaponComponent)?.modifyBullet(4, false);
-                }, duration);
+                const weapon = this.getComponent(WeaponComponent);
+                if (weapon) {
+                    weapon.setBulletSize(JSON.parse(effectValue));
+                    this.showPowerUpEffect("Big bullets time!");
+
+                    setTimeout(() => {
+                        weapon.resetBulletSize();
+                    }, duration);
+                }
                 break;
             case 'speed':
-                this.playerShipData.movementSpeed += JSON.parse(effectValue);
-                this.showPowerUpEffect("Speed up!");
-                setTimeout(() => {
-                    this.playerShipData.movementSpeed = this.initialSpeed;
-                }, duration);
+                const movementComponent = this.getComponent(Movement);
+                if (movementComponent) {
+                    movementComponent.setSpeed(this.playerShipData.movementSpeed + JSON.parse(effectValue));
+                    this.showPowerUpEffect("Speed up!");
+
+                    setTimeout(() => {
+                        movementComponent.setSpeed(this.initialSpeed);
+                    }, duration);
+                }
                 break;
             case 'invincibility':
                 this.playerShipData.invincible = true;
