@@ -5,7 +5,6 @@ import {EnemyManager} from "../services/EnemyManager.ts";
 import {PlayerManager} from "../services/PlayerManager.ts";
 import {CollisionManager} from "../services/CollisionManager.ts";
 import {PowerUpManager} from "../services/PowerUpManager.ts";
-import {Boss} from "../entities/Boss.ts";
 import {AssetManager} from "../services/AssetManager.ts";
 
 export class MainGameScene extends Scene
