@@ -33,7 +33,7 @@ export class MainGameScene extends Scene
     }
 
     create () {
-        this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2);
+        this.bg = this.add.tileSprite(0, 0, this.cameras.main.width, this.cameras.main.height, 'bg').setOrigin(0).setTileScale(2).setDepth(-2);
 
         this.backgroundElements = this.add.group();
         this.backgroundTimer = 0;
@@ -101,6 +101,8 @@ export class MainGameScene extends Scene
         const element = this.add.image(x, y, texture);
         element.setScale(Phaser.Math.FloatBetween(4, 7));
         element.setAlpha(Phaser.Math.FloatBetween(0.5, 1));
+
+        element.setDepth(-1);
 
         this.backgroundElements.add(element);
 
