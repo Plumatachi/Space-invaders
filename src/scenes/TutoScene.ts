@@ -1,10 +1,6 @@
-import { Player } from "../entities/Player.ts";
 import { EnemyManager } from "../services/EnemyManager.ts";
 import { AssetManager } from "../services/AssetManager.ts";
 import {LevelManager} from "../services/LevelManager.ts";
-import {Bullet} from "../entities/Bullet.ts";
-import {Enemy} from "../entities/Enemy.ts";
-import {Health} from "../components/Health.ts";
 import {PlayerManager} from "../services/PlayerManager.ts";
 
 export class TutoScene extends Phaser.Scene {
